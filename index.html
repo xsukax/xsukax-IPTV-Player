@@ -90,6 +90,7 @@
                 </div>
                 <div class="flex items-center gap-3 flex-wrap">
                     <span id="userInfo" class="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full"></span>
+                    <span id="expiryInfo" class="text-sm text-gray-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200"></span>
                     <button id="shareBtn" class="btn-primary px-4 py-2 rounded-lg">Share</button>
                     <button id="favBtn" class="btn-success px-4 py-2 rounded-lg">Favorites <span id="favCount" class="ml-1 bg-white text-green-700 px-2 py-0.5 rounded-full text-xs">0</span></button>
                     <button id="logoutBtn" class="btn-danger px-4 py-2 rounded-lg">Logout</button>
@@ -184,6 +185,7 @@
         const app = {
             state: {
                 creds: null,
+                userInfo: null,
                 type: 'live',
                 channels: [],
                 displayed: [],
@@ -247,6 +249,19 @@
                     this.state.creds = config.credentials;
                     this.state.favorites = new Set(config.favorites || []);
                     this.saveFavorites();
+                    
+                    // Fetch user info
+                    try {
+                        const url = this.buildUrl('player_api.php');
+                        const res = await fetch(url);
+                        const data = await res.json();
+                        if (data.user_info?.auth === 1) {
+                            this.state.userInfo = data.user_info;
+                        }
+                    } catch (err) {
+                        console.error('Failed to fetch user info:', err);
+                    }
+                    
                     this.hide('passwordModal');
                     await this.loadApp();
                     this.notify('Configuration loaded!', 'success');
@@ -270,6 +285,7 @@
                     const res = await fetch(url);
                     const data = await res.json();
                     if (data.user_info?.auth === 1) {
+                        this.state.userInfo = data.user_info;
                         await this.loadApp();
                         this.notify('Connected!', 'success');
                     } else {
@@ -278,6 +294,7 @@
                 } catch (error) {
                     this.notify('Connection failed', 'error');
                     this.state.creds = null;
+                    this.state.userInfo = null;
                 }
             },
 
@@ -285,8 +302,46 @@
                 this.hide('loginModal');
                 document.getElementById('mainApp').style.display = 'block';
                 document.getElementById('userInfo').textContent = `👤 ${this.state.creds.username}`;
+                this.displayExpiry();
                 this.updateFavCount();
                 await Promise.all([this.loadCategories(), this.loadChannels()]);
+            },
+
+            displayExpiry() {
+                const expiryEl = document.getElementById('expiryInfo');
+                if (!this.state.userInfo || !this.state.userInfo.exp_date) {
+                    expiryEl.style.display = 'none';
+                    return;
+                }
+
+                const expTimestamp = parseInt(this.state.userInfo.exp_date);
+                if (!expTimestamp || expTimestamp === 0) {
+                    expiryEl.textContent = '📅 Lifetime';
+                    expiryEl.style.display = 'inline-block';
+                    return;
+                }
+
+                const expDate = new Date(expTimestamp * 1000);
+                const now = new Date();
+                const daysLeft = Math.ceil((expDate - now) / (1000 * 60 * 60 * 24));
+                
+                const day = expDate.getDate();
+                const month = expDate.toLocaleDateString('en-US', { month: 'short' });
+                const year = expDate.getFullYear();
+                const dateStr = `${day} ${month} ${year}`;
+
+                if (daysLeft < 0) {
+                    expiryEl.textContent = `📅 Expired`;
+                    expiryEl.className = 'text-sm text-white bg-red-500 px-3 py-1 rounded-full';
+                } else if (daysLeft <= 7) {
+                    expiryEl.textContent = `📅 Expires in ${daysLeft} days (${dateStr})`;
+                    expiryEl.className = 'text-sm text-gray-900 bg-yellow-100 px-3 py-1 rounded-full border border-yellow-300';
+                } else {
+                    expiryEl.textContent = `📅 Valid until ${dateStr}`;
+                    expiryEl.className = 'text-sm text-gray-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200';
+                }
+                
+                expiryEl.style.display = 'inline-block';
             },
 
             async loadCategories() {
@@ -700,6 +755,7 @@
 
             logout() {
                 this.state.creds = null;
+                this.state.userInfo = null;
                 this.state.channels = [];
                 this.state.categories = [];
                 this.state.cache = {};
