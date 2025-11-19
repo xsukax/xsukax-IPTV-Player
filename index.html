@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>xsukax IPTV Player</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: #ffffff; color: #24292f; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(31, 35, 40, 0.7); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+        .modal-overlay.active { display: flex; }
+        .notification { position: fixed; top: 20px; right: 20px; background: #ffffff; color: #24292f; padding: 16px 24px; border-radius: 6px; box-shadow: 0 8px 16px rgba(31, 35, 40, 0.2); border: 1px solid #d0d7de; z-index: 2000; animation: slideIn 0.3s ease-out; max-width: 400px; }
+        .notification.success { border-left: 4px solid #1a7f37; }
+        .notification.error { border-left: 4px solid #cf222e; }
+        .notification.info { border-left: 4px solid #0969da; }
+        @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(400px); opacity: 0; } }
+        .notification.hiding { animation: slideOut 0.3s ease-in; }
+        video { width: 100%; height: 100%; background: #000; }
+        button:focus, input:focus, select:focus { outline: 3px solid #0969da; outline-offset: 2px; }
+        .channel-item { transition: all 0.15s; cursor: pointer; }
+        .channel-item:hover { background: #f6f8fa; transform: translateY(-1px); box-shadow: 0 3px 8px rgba(31, 35, 40, 0.12); }
+        .episode-item { transition: all 0.15s; cursor: pointer; }
+        .episode-item:hover { background: #f6f8fa; border-color: #0969da; }
+        .scrollable { overflow-y: auto; scrollbar-width: thin; scrollbar-color: #d0d7de #f6f8fa; }
+        .scrollable::-webkit-scrollbar { width: 10px; }
+        .scrollable::-webkit-scrollbar-track { background: #f6f8fa; }
+        .scrollable::-webkit-scrollbar-thumb { background: #d0d7de; border-radius: 5px; }
+        .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; background: #ddf4ff; color: #0969da; }
+        .mini-loader { display: inline-block; border: 2px solid #f6f8fa; border-top-color: #0969da; border-radius: 50%; width: 16px; height: 16px; animation: spin 0.6s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .btn-primary { background: #0969da; color: white; transition: all 0.15s; }
+        .btn-primary:hover { background: #0860ca; }
+        .btn-secondary { background: #f6f8fa; color: #24292f; border: 1px solid #d0d7de; transition: all 0.15s; }
+        .btn-secondary:hover { background: #f3f4f6; }
+        .btn-danger { background: #cf222e; color: white; transition: all 0.15s; }
+        .btn-danger:hover { background: #b5212e; }
+        .btn-success { background: #1a7f37; color: white; transition: all 0.15s; }
+        .btn-success:hover { background: #1a7731; }
+        .tab-active { background: #0969da; color: white; }
+        .tab-inactive { background: #ffffff; color: #57606a; border: 1px solid #d0d7de; }
+        .tab-inactive:hover { background: #f6f8fa; }
+        .skeleton { background: linear-gradient(90deg, #f6f8fa 25%, #eaeef2 50%, #f6f8fa 75%); background-size: 200% 100%; animation: loading 1.5s infinite; border-radius: 6px; }
+        @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .load-more { width: 100%; padding: 12px; background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; cursor: pointer; transition: all 0.15s; }
+        .load-more:hover { background: #f3f4f6; }
+        .season-header { background: #f6f8fa; padding: 12px; border-radius: 6px; margin-bottom: 8px; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div id="notifications"></div>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal-overlay active">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4 border border-gray-300 shadow-2xl">
+            <div class="text-center mb-6">
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">xsukax IPTV Player</h1>
+                <p class="text-sm text-gray-600">Chrome & Edge Optimized</p>
+            </div>
+            <form id="loginForm" class="space-y-4">
+                <div><label class="block text-sm font-semibold mb-2 text-gray-700">Server URL</label><input type="text" id="serverUrl" placeholder="http://example.com:8080" required class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 focus:border-blue-500 text-lg"></div>
+                <div><label class="block text-sm font-semibold mb-2 text-gray-700">Username</label><input type="text" id="username" required class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 focus:border-blue-500 text-lg"></div>
+                <div><label class="block text-sm font-semibold mb-2 text-gray-700">Password</label><input type="password" id="password" required class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 focus:border-blue-500 text-lg"></div>
+                <button type="submit" class="w-full btn-primary font-bold py-3 px-6 rounded-lg text-lg">Connect</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="passwordModal" class="modal-overlay">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4 border border-gray-300 shadow-2xl">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">🔐 Enter Password</h2>
+            <form id="passwordForm" class="space-y-4">
+                <input type="password" id="decryptPassword" placeholder="Enter decryption password" required class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 focus:border-blue-500 text-lg">
+                <button type="submit" class="w-full btn-primary font-bold py-3 px-6 rounded-lg text-lg">Decrypt</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" style="display: none;">
+        <header class="bg-white border-b border-gray-300 px-6 py-4 shadow-sm">
+            <div class="flex items-center justify-between flex-wrap gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">xsukax IPTV Player</h1>
+                    <p class="text-sm text-gray-600">Fast Streaming | Works on Chrome & Edge</p>
+                </div>
+                <div class="flex items-center gap-3 flex-wrap">
+                    <span id="userInfo" class="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full"></span>
+                    <button id="shareBtn" class="btn-primary px-4 py-2 rounded-lg">Share</button>
+                    <button id="favBtn" class="btn-success px-4 py-2 rounded-lg">Favorites <span id="favCount" class="ml-1 bg-white text-green-700 px-2 py-0.5 rounded-full text-xs">0</span></button>
+                    <button id="logoutBtn" class="btn-danger px-4 py-2 rounded-lg">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <nav class="bg-gray-50 border-b border-gray-300 px-6 py-3">
+            <div class="flex gap-2">
+                <button data-type="live" class="type-btn tab-active px-6 py-2 rounded-lg font-medium">📺 Live TV</button>
+                <button data-type="movies" class="type-btn tab-inactive px-6 py-2 rounded-lg font-medium">🎬 Movies</button>
+                <button data-type="series" class="type-btn tab-inactive px-6 py-2 rounded-lg font-medium">📺 Series</button>
+            </div>
+        </nav>
+
+        <div class="flex flex-col lg:flex-row" style="height: calc(100vh - 160px);">
+            <aside class="w-full lg:w-96 bg-gray-50 border-r border-gray-300 flex flex-col">
+                <div class="p-4 border-b border-gray-300 bg-white">
+                    <input type="search" id="searchInput" placeholder="🔍 Search..." class="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg">
+                </div>
+                <div class="p-4 border-b border-gray-300 bg-white">
+                    <select id="categorySelect" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg">
+                        <option value="all">All Categories</option>
+                    </select>
+                </div>
+                <div id="channelsList" class="flex-1 overflow-y-auto scrollable p-4"></div>
+            </aside>
+
+            <main class="flex-1 bg-black relative flex items-center justify-center">
+                <div id="placeholder" class="text-center text-gray-400">
+                    <div class="text-6xl mb-4">📺</div>
+                    <p class="text-xl">Select a channel</p>
+                </div>
+                <video id="player" controls style="display: none;"></video>
+                <div id="videoInfo" class="absolute top-4 left-4 bg-white bg-opacity-95 px-4 py-3 rounded-lg shadow-lg" style="display: none;">
+                    <h3 id="channelName" class="font-bold text-lg text-gray-900"></h3>
+                    <p id="channelCat" class="text-sm text-gray-600"></p>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Episodes Modal -->
+    <div id="episodesModal" class="modal-overlay">
+        <div class="bg-white rounded-lg p-8 max-w-4xl w-full mx-4 border border-gray-300 shadow-2xl max-h-screen overflow-hidden flex flex-col">
+            <div class="flex justify-between mb-4">
+                <h2 id="seriesTitle" class="text-2xl font-bold text-gray-900"></h2>
+                <button id="closeEpisodes" class="text-gray-500 hover:text-gray-900 text-2xl">&times;</button>
+            </div>
+            <div id="episodesList" class="flex-1 overflow-y-auto scrollable"></div>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="shareModal" class="modal-overlay">
+        <div class="bg-white rounded-lg p-8 max-w-2xl w-full mx-4 border border-gray-300 shadow-2xl">
+            <h2 class="text-2xl font-bold mb-4 text-gray-900">🔗 Share Configuration</h2>
+            <div id="shareStep1" class="space-y-4">
+                <p class="text-gray-600">Set a password to encrypt your configuration</p>
+                <input type="password" id="sharePassword" placeholder="Enter password" class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg">
+                <button id="generateBtn" class="w-full btn-primary px-6 py-3 rounded-lg">Generate URL</button>
+            </div>
+            <div id="shareStep2" style="display: none;" class="space-y-4">
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-300 break-all">
+                    <code id="shareUrl" class="text-sm text-blue-600"></code>
+                </div>
+                <p class="text-sm text-gray-600">Password: <strong id="sharePass" class="text-gray-900"></strong></p>
+                <div class="flex gap-3">
+                    <button id="copyBtn" class="flex-1 btn-success px-6 py-2 rounded-lg">Copy URL</button>
+                    <button id="testBtn" class="flex-1 btn-primary px-6 py-2 rounded-lg">Test URL</button>
+                </div>
+                <button id="backBtn" class="w-full btn-secondary px-6 py-2 rounded-lg">New URL</button>
+            </div>
+            <div class="mt-4 flex justify-end">
+                <button id="closeShare" class="btn-secondary px-6 py-2 rounded-lg">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Favorites Modal -->
+    <div id="favModal" class="modal-overlay">
+        <div class="bg-white rounded-lg p-8 max-w-4xl w-full mx-4 border border-gray-300 shadow-2xl max-h-screen overflow-hidden flex flex-col">
+            <h2 class="text-2xl font-bold mb-4 text-gray-900">⭐ Favorites</h2>
+            <div id="favList" class="flex-1 overflow-y-auto scrollable space-y-2"></div>
+            <div class="mt-4 flex justify-end">
+                <button id="closeFav" class="btn-secondary px-6 py-2 rounded-lg">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const app = {
+            state: {
+                creds: null,
+                type: 'live',
+                channels: [],
+                displayed: [],
+                categories: [],
+                favorites: new Set(),
+                category: 'all',
+                search: '',
+                cache: {},
+                catCache: {},
+                page: 0,
+                pageSize: 50,
+                hls: null
+            },
+
+            init() {
+                this.loadFavorites();
+                this.checkUrl();
+                this.bindEvents();
+            },
+
+            bindEvents() {
+                document.getElementById('loginForm').onsubmit = (e) => this.login(e);
+                document.getElementById('passwordForm').onsubmit = (e) => this.decrypt(e);
+                document.getElementById('logoutBtn').onclick = () => this.logout();
+                document.getElementById('shareBtn').onclick = () => this.showShare();
+                document.getElementById('generateBtn').onclick = () => this.generateUrl();
+                document.getElementById('favBtn').onclick = () => this.showFavorites();
+                document.getElementById('closeShare').onclick = () => this.hide('shareModal');
+                document.getElementById('closeFav').onclick = () => this.hide('favModal');
+                document.getElementById('closeEpisodes').onclick = () => this.hide('episodesModal');
+                document.getElementById('copyBtn').onclick = () => this.copyUrl();
+                document.getElementById('testBtn').onclick = () => this.testUrl();
+                document.getElementById('backBtn').onclick = () => this.resetShare();
+                document.getElementById('searchInput').oninput = (e) => this.handleSearch(e.target.value);
+                document.getElementById('categorySelect').onchange = (e) => this.changeCategory(e.target.value);
+
+                document.querySelectorAll('.type-btn').forEach(btn => {
+                    btn.onclick = () => this.switchType(btn.dataset.type);
+                });
+
+                document.getElementById('channelsList').onscroll = () => this.handleScroll();
+            },
+
+            async checkUrl() {
+                const params = new URLSearchParams(location.search);
+                const config = params.get('config');
+                if (config) {
+                    this.state.pendingConfig = decodeURIComponent(config);
+                    this.hide('loginModal');
+                    document.getElementById('passwordModal').classList.add('active');
+                }
+            },
+
+            async decrypt(e) {
+                e.preventDefault();
+                const password = document.getElementById('decryptPassword').value;
+                try {
+                    this.notify('Decrypting...', 'info');
+                    const decrypted = await this.decryptData(this.state.pendingConfig, password);
+                    const config = JSON.parse(decrypted);
+                    this.state.creds = config.credentials;
+                    this.state.favorites = new Set(config.favorites || []);
+                    this.saveFavorites();
+                    this.hide('passwordModal');
+                    await this.loadApp();
+                    this.notify('Configuration loaded!', 'success');
+                    history.replaceState({}, '', location.pathname);
+                } catch (error) {
+                    this.notify('Wrong password', 'error');
+                    document.getElementById('decryptPassword').value = '';
+                }
+            },
+
+            async login(e) {
+                e.preventDefault();
+                const serverUrl = document.getElementById('serverUrl').value.trim().replace(/\/$/, '');
+                const username = document.getElementById('username').value.trim();
+                const password = document.getElementById('password').value.trim();
+                this.state.creds = { serverUrl, username, password };
+
+                try {
+                    this.notify('Connecting...', 'info');
+                    const url = this.buildUrl('player_api.php');
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    if (data.user_info?.auth === 1) {
+                        await this.loadApp();
+                        this.notify('Connected!', 'success');
+                    } else {
+                        throw new Error('Invalid credentials');
+                    }
+                } catch (error) {
+                    this.notify('Connection failed', 'error');
+                    this.state.creds = null;
+                }
+            },
+
+            async loadApp() {
+                this.hide('loginModal');
+                document.getElementById('mainApp').style.display = 'block';
+                document.getElementById('userInfo').textContent = `👤 ${this.state.creds.username}`;
+                this.updateFavCount();
+                await Promise.all([this.loadCategories(), this.loadChannels()]);
+            },
+
+            async loadCategories() {
+                const key = this.state.type;
+                if (this.state.catCache[key]) {
+                    this.state.categories = this.state.catCache[key];
+                    this.renderCategories();
+                    return;
+                }
+
+                const actions = { live: 'get_live_categories', movies: 'get_vod_categories', series: 'get_series_categories' };
+                try {
+                    const url = this.buildUrl('player_api.php', `action=${actions[this.state.type]}`);
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    this.state.categories = Array.isArray(data) ? data : [];
+                    this.state.catCache[key] = this.state.categories;
+                    this.renderCategories();
+                } catch (error) {
+                    this.state.categories = [];
+                }
+            },
+
+            async loadChannels() {
+                const key = `${this.state.type}_${this.state.category}`;
+                if (this.state.cache[key]) {
+                    this.state.channels = this.state.cache[key];
+                    this.resetPage();
+                    this.renderChannels();
+                    return;
+                }
+
+                const actions = { live: 'get_live_streams', movies: 'get_vod_streams', series: 'get_series' };
+                try {
+                    this.showSkeleton();
+                    let params = `action=${actions[this.state.type]}`;
+                    if (this.state.category !== 'all') params += `&category_id=${this.state.category}`;
+                    const url = this.buildUrl('player_api.php', params);
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    this.state.channels = Array.isArray(data) ? data : [];
+                    this.state.cache[key] = this.state.channels;
+                    this.resetPage();
+                    this.renderChannels();
+                } catch (error) {
+                    document.getElementById('channelsList').innerHTML = '<div class="text-center text-gray-500 py-8">Failed to load</div>';
+                }
+            },
+
+            renderCategories() {
+                const select = document.getElementById('categorySelect');
+                select.innerHTML = `<option value="all">All Categories</option>${this.state.categories.map(c => 
+                    `<option value="${c.category_id}">${this.escape(c.category_name)}</option>`
+                ).join('')}`;
+                select.value = this.state.category;
+            },
+
+            resetPage() {
+                this.state.page = 0;
+                this.state.displayed = [];
+            },
+
+            renderChannels() {
+                let channels = this.state.channels;
+                if (this.state.search) {
+                    channels = channels.filter(c => (c.name || c.title || '').toLowerCase().includes(this.state.search));
+                }
+
+                const start = this.state.page * this.state.pageSize;
+                const end = start + this.state.pageSize;
+                const page = channels.slice(start, end);
+
+                if (this.state.page === 0) this.state.displayed = [];
+                this.state.displayed.push(...page);
+
+                const container = document.getElementById('channelsList');
+                if (this.state.displayed.length === 0) {
+                    container.innerHTML = '<div class="text-center text-gray-500 py-8">No channels</div>';
+                    return;
+                }
+
+                const html = this.state.displayed.map(ch => {
+                    const name = this.escape(ch.name || ch.title || 'Unknown');
+                    const isFav = this.state.favorites.has(this.getId(ch));
+                    return `
+                        <div class="channel-item bg-white rounded-lg p-4 mb-2 border border-gray-300" data-channel='${JSON.stringify(ch).replace(/'/g, "&apos;")}'>
+                            <div class="flex justify-between gap-3">
+                                <div class="flex-1">
+                                    <h3 class="font-semibold text-base mb-1 truncate text-gray-900">${name}</h3>
+                                    ${ch.stream_type ? `<span class="badge">${ch.stream_type}</span>` : ''}
+                                </div>
+                                <button class="fav-btn text-2xl" style="color: ${isFav ? '#bf8700' : '#d0d7de'}" data-id="${this.getId(ch)}" onclick="event.stopPropagation()">
+                                    ${isFav ? '★' : '☆'}
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                const hasMore = this.state.displayed.length < channels.length;
+                const loadMore = hasMore ? `<button class="load-more mt-2">Load More (${channels.length - this.state.displayed.length} remaining)</button>` : '';
+
+                container.innerHTML = html + loadMore;
+
+                container.querySelectorAll('.channel-item').forEach(item => {
+                    item.onclick = () => {
+                        const ch = JSON.parse(item.dataset.channel);
+                        this.state.type === 'series' ? this.showEpisodes(ch) : this.play(ch);
+                    };
+                });
+
+                container.querySelectorAll('.fav-btn').forEach(btn => {
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        this.toggleFav(btn.dataset.id);
+                    };
+                });
+
+                if (hasMore) {
+                    container.querySelector('.load-more').onclick = () => {
+                        this.state.page++;
+                        this.renderChannels();
+                    };
+                }
+            },
+
+            handleScroll() {
+                const el = document.getElementById('channelsList');
+                if ((el.scrollTop + el.clientHeight) / el.scrollHeight > 0.8) {
+                    const btn = el.querySelector('.load-more');
+                    if (btn) btn.click();
+                }
+            },
+
+            showSkeleton() {
+                document.getElementById('channelsList').innerHTML = Array(5).fill(0).map(() => 
+                    `<div class="bg-white rounded-lg p-4 mb-2 border border-gray-300">
+                        <div class="skeleton h-5 w-3/4 mb-2"></div>
+                        <div class="skeleton h-4 w-1/4"></div>
+                    </div>`
+                ).join('');
+            },
+
+            async showEpisodes(series) {
+                try {
+                    this.notify('Loading episodes...', 'info');
+                    const url = this.buildUrl('player_api.php', `action=get_series_info&series_id=${series.series_id}`);
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    document.getElementById('seriesTitle').textContent = series.name || series.title;
+                    
+                    const list = document.getElementById('episodesList');
+                    if (!data.episodes || Object.keys(data.episodes).length === 0) {
+                        list.innerHTML = '<div class="text-center text-gray-500 py-8">No episodes</div>';
+                    } else {
+                        const seasons = Object.keys(data.episodes).sort((a, b) => a - b);
+                        list.innerHTML = seasons.map(s => {
+                            const eps = data.episodes[s];
+                            return `<div class="season-header">Season ${s}</div>${eps.map(ep => 
+                                `<div class="episode-item bg-white rounded-lg p-4 mb-2 border border-gray-300" data-ep='${JSON.stringify(ep).replace(/'/g, "&apos;")}' data-series='${JSON.stringify(series).replace(/'/g, "&apos;")}'>
+                                    <h4 class="font-semibold text-gray-900">Ep ${ep.episode_num}: ${this.escape(ep.title || 'Untitled')}</h4>
+                                </div>`
+                            ).join('')}`;
+                        }).join('');
+
+                        list.querySelectorAll('.episode-item').forEach(item => {
+                            item.onclick = () => {
+                                const ep = JSON.parse(item.dataset.ep);
+                                const ser = JSON.parse(item.dataset.series);
+                                this.playEpisode(ep, ser);
+                                this.hide('episodesModal');
+                            };
+                        });
+                    }
+                    document.getElementById('episodesModal').classList.add('active');
+                } catch (error) {
+                    this.notify('Failed to load episodes', 'error');
+                }
+            },
+
+            playEpisode(ep, series) {
+                const { serverUrl, username, password } = this.state.creds;
+                const ext = ep.container_extension || 'mp4';
+                const url = `${serverUrl}/series/${username}/${password}/${ep.id}.${ext}`;
+                this.playStream(url, `${series.name} - S${ep.season}E${ep.episode_num}`, series.category_id);
+            },
+
+            play(ch) {
+                const { serverUrl, username, password } = this.state.creds;
+                const { type } = this.state;
+                let url = '';
+                
+                if (type === 'live') {
+                    url = `${serverUrl}/live/${username}/${password}/${ch.stream_id}.m3u8`;
+                } else if (type === 'movies') {
+                    const ext = ch.container_extension || 'mp4';
+                    url = `${serverUrl}/movie/${username}/${password}/${ch.stream_id}.${ext}`;
+                }
+                
+                this.playStream(url, ch.name || ch.title, ch.category_id);
+            },
+
+            playStream(url, name, catId) {
+                const player = document.getElementById('player');
+                const placeholder = document.getElementById('placeholder');
+                const info = document.getElementById('videoInfo');
+
+                if (this.state.hls) {
+                    this.state.hls.destroy();
+                    this.state.hls = null;
+                }
+
+                player.pause();
+                player.src = '';
+                player.load();
+
+                player.style.display = 'block';
+                placeholder.style.display = 'none';
+                info.style.display = 'block';
+
+                document.getElementById('channelName').textContent = name;
+                document.getElementById('channelCat').textContent = this.getCatName(catId);
+
+                setTimeout(() => {
+                    if (url.includes('.m3u8')) {
+                        if (Hls.isSupported()) {
+                            this.state.hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+                            this.state.hls.loadSource(url);
+                            this.state.hls.attachMedia(player);
+                            this.state.hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                                player.play().catch(err => this.notify('Playback failed', 'error'));
+                            });
+                            this.state.hls.on(Hls.Events.ERROR, (e, data) => {
+                                if (data.fatal) this.notify('Stream error', 'error');
+                            });
+                        }
+                    } else {
+                        player.src = url;
+                        player.load();
+                        player.play().catch(err => this.notify('Playback failed', 'error'));
+                    }
+                }, 100);
+            },
+
+            getCatName(id) {
+                const cat = this.state.categories.find(c => c.category_id == id);
+                return cat ? cat.category_name : 'Unknown';
+            },
+
+            getId(ch) {
+                return String(ch.stream_id || ch.series_id || ch.num || Math.random());
+            },
+
+            toggleFav(id) {
+                if (this.state.favorites.has(id)) {
+                    this.state.favorites.delete(id);
+                    this.notify('Removed from favorites', 'info');
+                } else {
+                    this.state.favorites.add(id);
+                    this.notify('Added to favorites', 'success');
+                }
+                this.saveFavorites();
+                this.updateFavCount();
+                this.renderChannels();
+            },
+
+            updateFavCount() {
+                document.getElementById('favCount').textContent = this.state.favorites.size;
+            },
+
+            saveFavorites() {
+                localStorage.setItem('iptv_fav', JSON.stringify([...this.state.favorites]));
+            },
+
+            loadFavorites() {
+                const saved = localStorage.getItem('iptv_fav');
+                if (saved) this.state.favorites = new Set(JSON.parse(saved));
+            },
+
+            showFavorites() {
+                const favs = this.state.channels.filter(c => this.state.favorites.has(this.getId(c)));
+                const list = document.getElementById('favList');
+                
+                if (favs.length === 0) {
+                    list.innerHTML = '<div class="text-center text-gray-500 py-8">No favorites</div>';
+                } else {
+                    list.innerHTML = favs.map(ch => {
+                        const name = this.escape(ch.name || ch.title || 'Unknown');
+                        return `<div class="bg-white rounded-lg p-4 border border-gray-300 hover:border-blue-500 cursor-pointer" data-ch='${JSON.stringify(ch).replace(/'/g, "&apos;")}'>
+                            <h3 class="font-semibold truncate text-gray-900">${name}</h3>
+                            <span class="badge">⭐ Favorite</span>
+                        </div>`;
+                    }).join('');
+
+                    list.querySelectorAll('[data-ch]').forEach(item => {
+                        item.onclick = () => {
+                            const ch = JSON.parse(item.dataset.ch);
+                            this.state.type === 'series' ? this.showEpisodes(ch) : this.play(ch);
+                            this.hide('favModal');
+                        };
+                    });
+                }
+                document.getElementById('favModal').classList.add('active');
+            },
+
+            showShare() {
+                this.resetShare();
+                document.getElementById('shareModal').classList.add('active');
+            },
+
+            resetShare() {
+                document.getElementById('shareStep1').style.display = 'block';
+                document.getElementById('shareStep2').style.display = 'none';
+                document.getElementById('sharePassword').value = '';
+            },
+
+            async generateUrl() {
+                const password = document.getElementById('sharePassword').value;
+                if (!password || password.length < 4) {
+                    this.notify('Password must be 4+ characters', 'error');
+                    return;
+                }
+
+                try {
+                    const config = { credentials: this.state.creds, favorites: [...this.state.favorites] };
+                    const encrypted = await this.encryptData(JSON.stringify(config), password);
+                    const url = `${location.origin}${location.pathname}?config=${encodeURIComponent(encrypted)}`;
+                    
+                    document.getElementById('shareUrl').textContent = url;
+                    document.getElementById('sharePass').textContent = password;
+                    document.getElementById('shareStep1').style.display = 'none';
+                    document.getElementById('shareStep2').style.display = 'block';
+                    this.notify('URL generated!', 'success');
+                } catch (error) {
+                    this.notify('Failed to generate', 'error');
+                }
+            },
+
+            async copyUrl() {
+                const url = document.getElementById('shareUrl').textContent;
+                try {
+                    await navigator.clipboard.writeText(url);
+                    this.notify('Copied!', 'success');
+                } catch (error) {
+                    this.notify('Copy failed', 'error');
+                }
+            },
+
+            testUrl() {
+                window.open(document.getElementById('shareUrl').textContent, '_blank');
+            },
+
+            async encryptData(text, password) {
+                const enc = new TextEncoder();
+                const data = enc.encode(text);
+                const pwKey = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits', 'deriveKey']);
+                const salt = crypto.getRandomValues(new Uint8Array(16));
+                const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, pwKey, { name: 'AES-GCM', length: 256 }, false, ['encrypt']);
+                const iv = crypto.getRandomValues(new Uint8Array(12));
+                const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data);
+                const combined = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
+                combined.set(salt);
+                combined.set(iv, salt.length);
+                combined.set(new Uint8Array(encrypted), salt.length + iv.length);
+                return btoa(String.fromCharCode(...combined));
+            },
+
+            async decryptData(encryptedBase64, password) {
+                const enc = new TextEncoder();
+                const combined = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0));
+                const salt = combined.slice(0, 16);
+                const iv = combined.slice(16, 28);
+                const encrypted = combined.slice(28);
+                const pwKey = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits', 'deriveKey']);
+                const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, pwKey, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+                const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, encrypted);
+                return new TextDecoder().decode(decrypted);
+            },
+
+            switchType(type) {
+                this.state.type = type;
+                this.state.category = 'all';
+                this.state.search = '';
+                document.getElementById('searchInput').value = '';
+                
+                document.querySelectorAll('.type-btn').forEach(btn => {
+                    btn.className = btn.dataset.type === type ? 'type-btn tab-active px-6 py-2 rounded-lg font-medium' : 'type-btn tab-inactive px-6 py-2 rounded-lg font-medium';
+                });
+
+                this.loadCategories();
+                this.loadChannels();
+            },
+
+            changeCategory(cat) {
+                this.state.category = cat;
+                this.loadChannels();
+            },
+
+            handleSearch(query) {
+                this.state.search = query.toLowerCase();
+                this.resetPage();
+                this.renderChannels();
+            },
+
+            buildUrl(endpoint, params = '') {
+                const { serverUrl, username, password } = this.state.creds;
+                const base = `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`;
+                const all = params ? `${base}&${params}` : base;
+                return `${serverUrl}/${endpoint}?${all}`;
+            },
+
+            logout() {
+                this.state.creds = null;
+                this.state.channels = [];
+                this.state.categories = [];
+                this.state.cache = {};
+                if (this.state.hls) this.state.hls.destroy();
+                document.getElementById('mainApp').style.display = 'none';
+                document.getElementById('loginModal').classList.add('active');
+                document.getElementById('player').src = '';
+                this.notify('Logged out', 'info');
+            },
+
+            hide(id) {
+                document.getElementById(id).classList.remove('active');
+            },
+
+            notify(msg, type = 'info') {
+                const div = document.createElement('div');
+                div.className = `notification ${type}`;
+                div.textContent = msg;
+                document.getElementById('notifications').appendChild(div);
+                setTimeout(() => {
+                    div.classList.add('hiding');
+                    setTimeout(() => div.remove(), 300);
+                }, 3000);
+            },
+
+            escape(str) {
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => app.init());
+    </script>
+</body>
+</html>
