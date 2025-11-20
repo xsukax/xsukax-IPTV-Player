@@ -16,6 +16,7 @@
         .notification.success { border-left: 4px solid #1a7f37; }
         .notification.error { border-left: 4px solid #cf222e; }
         .notification.info { border-left: 4px solid #0969da; }
+        .notification.warning { border-left: 4px solid #bf8700; }
         .notification.hiding { animation: slideOut 0.3s ease-in; }
         @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(400px); opacity: 0; } }
@@ -45,7 +46,7 @@
         .flex-wrap { flex-wrap: wrap; }
         .items-center { align-items: center; }
         .justify-between { justify-content: space-between; }
-        .justify-end { justify-end: flex-end; }
+        .justify-end { justify-content: flex-end; }
         .gap-2 { gap: 8px; }
         .gap-3 { gap: 12px; }
         .gap-4 { gap: 16px; }
@@ -105,8 +106,7 @@
         .flex-1 { flex: 1; }
         .overflow-hidden { overflow: hidden; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .mini-loader { display: inline-block; border: 2px solid #f6f8fa; border-top-color: #0969da; border-radius: 50%; width: 16px; height: 16px; animation: spin 0.6s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .result-count { font-size: 14px; color: #57606a; padding: 8px 16px; background: #f6f8fa; border-radius: 6px; margin-bottom: 8px; }
         @media (min-width: 1024px) { .container { flex-direction: row; } .sidebar { width: 384px; } }
         @media (max-width: 768px) { .header-content { flex-direction: column; } .tabs { flex-wrap: wrap; } }
     </style>
@@ -119,8 +119,7 @@
         <div class="modal-content">
             <div class="text-center mb-4">
                 <h1>xsukax IPTV Player</h1>
-                <p class="text-small">If your IPTV Server uses http (not https)</p>
-				<p class="text-small">Download index.html file and use it from your PC</p>
+                <p class="text-small">Chrome & Edge Optimized</p>
             </div>
             <form id="loginForm">
                 <div class="form-group">
@@ -159,7 +158,7 @@
             <div class="header-content">
                 <div>
                     <h1>xsukax IPTV Player</h1>
-                    <p class="text-small">Fast Streaming | Works on Chrome & Edge</p>
+                    <p class="text-small">Fast Streaming</p>
                 </div>
                 <div class="header-buttons">
                     <span id="userInfo" class="badge"></span>
@@ -182,13 +181,14 @@
         <div class="container">
             <aside class="sidebar">
                 <div class="sidebar-section">
-                    <input type="search" id="searchInput" placeholder="🔍 Search...">
+                    <input type="search" id="searchInput" placeholder="🔍 Search in all channels...">
                 </div>
                 <div class="sidebar-section">
                     <select id="categorySelect">
                         <option value="all">All Categories</option>
                     </select>
                 </div>
+                <div id="resultCount" class="result-count hidden"></div>
                 <div id="channelsList" class="channels-list scrollable"></div>
             </aside>
 
@@ -224,7 +224,7 @@
             <div id="shareStep1">
                 <p class="text-small mb-4">Set a password to encrypt your configuration</p>
                 <div class="form-group">
-                    <input type="password" id="sharePassword" placeholder="Enter password">
+                    <input type="password" id="sharePassword" placeholder="Enter password (min 4 characters)">
                 </div>
                 <button id="generateBtn" class="btn btn-primary btn-full">Generate URL</button>
             </div>
@@ -237,7 +237,7 @@
                     <button id="copyBtn" class="btn btn-success flex-1">Copy URL</button>
                     <button id="testBtn" class="btn btn-primary flex-1">Test URL</button>
                 </div>
-                <button id="backBtn" class="btn btn-secondary btn-full">New URL</button>
+                <button id="backBtn" class="btn btn-secondary btn-full">Generate New URL</button>
             </div>
             <div class="mt-4 flex justify-end">
                 <button id="closeShare" class="btn btn-secondary">Close</button>
@@ -262,6 +262,7 @@
                 creds: null,
                 userInfo: null,
                 type: 'live',
+                allChannels: [],
                 channels: [],
                 displayed: [],
                 categories: [],
@@ -288,9 +289,9 @@
                 document.getElementById('shareBtn').onclick = () => this.showShare();
                 document.getElementById('generateBtn').onclick = () => this.generateUrl();
                 document.getElementById('favBtn').onclick = () => this.showFavorites();
-                document.getElementById('closeShare').onclick = () => this.hide('shareModal');
-                document.getElementById('closeFav').onclick = () => this.hide('favModal');
-                document.getElementById('closeEpisodes').onclick = () => this.hide('episodesModal');
+                document.getElementById('closeShare').onclick = () => this.closeModal('shareModal');
+                document.getElementById('closeFav').onclick = () => this.closeModal('favModal');
+                document.getElementById('closeEpisodes').onclick = () => this.closeModal('episodesModal');
                 document.getElementById('copyBtn').onclick = () => this.copyUrl();
                 document.getElementById('testBtn').onclick = () => this.testUrl();
                 document.getElementById('backBtn').onclick = () => this.resetShare();
@@ -309,7 +310,7 @@
                 const config = params.get('config');
                 if (config) {
                     this.state.pendingConfig = decodeURIComponent(config);
-                    this.hide('loginModal');
+                    this.closeModal('loginModal');
                     document.getElementById('passwordModal').classList.add('active');
                 }
             },
@@ -318,16 +319,12 @@
                 e.preventDefault();
                 const password = document.getElementById('decryptPassword').value;
                 try {
-                    this.notify('Decrypting...', 'info');
+                    this.notify('🔓 Decrypting configuration...', 'info');
                     
                     let config;
-                    
-                    // Try to detect if it's base64 encoded (HTTP fallback) or AES encrypted
                     try {
-                        // First, try simple base64 decode (HTTP fallback)
                         const decoded = JSON.parse(atob(this.state.pendingConfig));
                         if (decoded._pass) {
-                            // This is base64 encoded with password hint
                             if (atob(decoded._pass) === password) {
                                 delete decoded._pass;
                                 config = decoded;
@@ -335,12 +332,10 @@
                                 throw new Error('Wrong password');
                             }
                         } else {
-                            // Try AES decryption
                             const decrypted = await this.decryptData(this.state.pendingConfig, password);
                             config = JSON.parse(decrypted);
                         }
                     } catch (err) {
-                        // If base64 fails, try AES decryption
                         const decrypted = await this.decryptData(this.state.pendingConfig, password);
                         config = JSON.parse(decrypted);
                     }
@@ -360,21 +355,18 @@
                         console.error('Failed to fetch user info:', err);
                     }
                     
-                    this.hide('passwordModal');
+                    this.closeModal('passwordModal');
                     await this.loadApp();
-                    this.notify('Configuration loaded!', 'success');
+                    this.notify('✅ Configuration loaded successfully!', 'success');
                     
-                    // Clean URL (works for http, https, and file://)
                     try {
                         if (location.protocol !== 'file:') {
                             history.replaceState({}, '', location.pathname);
                         }
-                    } catch (err) {
-                        // Ignore history API errors
-                    }
+                    } catch (err) {}
                 } catch (error) {
                     console.error('Decrypt error:', error);
-                    this.notify('Wrong password', 'error');
+                    this.notify('❌ Wrong password! Please try again.', 'error');
                     document.getElementById('decryptPassword').value = '';
                 }
             },
@@ -387,26 +379,26 @@
                 this.state.creds = { serverUrl, username, password };
 
                 try {
-                    this.notify('Connecting...', 'info');
+                    this.notify('🔄 Connecting to IPTV server...', 'info');
                     const url = this.buildUrl('player_api.php');
                     const res = await fetch(url);
                     const data = await res.json();
                     if (data.user_info?.auth === 1) {
                         this.state.userInfo = data.user_info;
                         await this.loadApp();
-                        this.notify('Connected!', 'success');
+                        this.notify('✅ Connected successfully!', 'success');
                     } else {
                         throw new Error('Invalid credentials');
                     }
                 } catch (error) {
-                    this.notify('Connection failed', 'error');
+                    this.notify('❌ Connection failed! Check your credentials.', 'error');
                     this.state.creds = null;
                     this.state.userInfo = null;
                 }
             },
 
             async loadApp() {
-                this.hide('loginModal');
+                this.closeModal('loginModal');
                 document.getElementById('mainApp').classList.remove('hidden');
                 document.getElementById('userInfo').textContent = `👤 ${this.state.creds.username}`;
                 this.displayExpiry();
@@ -461,6 +453,7 @@
 
                 const actions = { live: 'get_live_categories', movies: 'get_vod_categories', series: 'get_series_categories' };
                 try {
+                    this.notify('📂 Loading categories...', 'info');
                     const url = this.buildUrl('player_api.php', `action=${actions[this.state.type]}`);
                     const res = await fetch(url);
                     const data = await res.json();
@@ -469,13 +462,15 @@
                     this.renderCategories();
                 } catch (error) {
                     this.state.categories = [];
+                    this.notify('⚠️ Failed to load categories', 'warning');
                 }
             },
 
             async loadChannels() {
                 const key = `${this.state.type}_${this.state.category}`;
                 if (this.state.cache[key]) {
-                    this.state.channels = this.state.cache[key];
+                    this.state.allChannels = this.state.cache[key];
+                    this.state.channels = [...this.state.allChannels];
                     this.resetPage();
                     this.renderChannels();
                     return;
@@ -484,23 +479,27 @@
                 const actions = { live: 'get_live_streams', movies: 'get_vod_streams', series: 'get_series' };
                 try {
                     this.showSkeleton();
+                    this.notify('📺 Loading channels...', 'info');
                     let params = `action=${actions[this.state.type]}`;
                     if (this.state.category !== 'all') params += `&category_id=${this.state.category}`;
                     const url = this.buildUrl('player_api.php', params);
                     const res = await fetch(url);
                     const data = await res.json();
-                    this.state.channels = Array.isArray(data) ? data : [];
-                    this.state.cache[key] = this.state.channels;
+                    this.state.allChannels = Array.isArray(data) ? data : [];
+                    this.state.channels = [...this.state.allChannels];
+                    this.state.cache[key] = this.state.allChannels;
                     this.resetPage();
                     this.renderChannels();
+                    this.notify(`✅ Loaded ${this.state.allChannels.length} channels`, 'success');
                 } catch (error) {
-                    document.getElementById('channelsList').innerHTML = '<div class="text-center text-small">Failed to load</div>';
+                    document.getElementById('channelsList').innerHTML = '<div class="text-center text-small">Failed to load channels</div>';
+                    this.notify('❌ Failed to load channels', 'error');
                 }
             },
 
             renderCategories() {
                 const select = document.getElementById('categorySelect');
-                select.innerHTML = `<option value="all">All Categories</option>${this.state.categories.map(c => 
+                select.innerHTML = `<option value="all">All Categories (${this.state.allChannels.length})</option>${this.state.categories.map(c => 
                     `<option value="${c.category_id}">${this.escape(c.category_name)}</option>`
                 ).join('')}`;
                 select.value = this.state.category;
@@ -512,22 +511,27 @@
             },
 
             renderChannels() {
-                let channels = this.state.channels;
-                if (this.state.search) {
-                    channels = channels.filter(c => (c.name || c.title || '').toLowerCase().includes(this.state.search));
-                }
-
                 const start = this.state.page * this.state.pageSize;
                 const end = start + this.state.pageSize;
-                const page = channels.slice(start, end);
+                const page = this.state.channels.slice(start, end);
 
                 if (this.state.page === 0) this.state.displayed = [];
                 this.state.displayed.push(...page);
 
                 const container = document.getElementById('channelsList');
+                const resultEl = document.getElementById('resultCount');
+                
                 if (this.state.displayed.length === 0) {
-                    container.innerHTML = '<div class="text-center text-small">No channels</div>';
+                    container.innerHTML = '<div class="text-center text-small">No channels found</div>';
+                    resultEl.classList.add('hidden');
                     return;
+                }
+
+                if (this.state.search) {
+                    resultEl.textContent = `Found ${this.state.channels.length} channels matching "${this.state.search}"`;
+                    resultEl.classList.remove('hidden');
+                } else {
+                    resultEl.classList.add('hidden');
                 }
 
                 const html = this.state.displayed.map(ch => {
@@ -548,8 +552,8 @@
                     `;
                 }).join('');
 
-                const hasMore = this.state.displayed.length < channels.length;
-                const loadMore = hasMore ? `<button class="load-more">Load More (${channels.length - this.state.displayed.length} remaining)</button>` : '';
+                const hasMore = this.state.displayed.length < this.state.channels.length;
+                const loadMore = hasMore ? `<button class="load-more">Load More (${this.state.channels.length - this.state.displayed.length} remaining)</button>` : '';
 
                 container.innerHTML = html + loadMore;
 
@@ -594,7 +598,7 @@
 
             async showEpisodes(series) {
                 try {
-                    this.notify('Loading episodes...', 'info');
+                    this.notify('📺 Loading episodes...', 'info');
                     const url = this.buildUrl('player_api.php', `action=get_series_info&series_id=${series.series_id}`);
                     const res = await fetch(url);
                     const data = await res.json();
@@ -602,7 +606,7 @@
                     
                     const list = document.getElementById('episodesList');
                     if (!data.episodes || Object.keys(data.episodes).length === 0) {
-                        list.innerHTML = '<div class="text-center text-small">No episodes</div>';
+                        list.innerHTML = '<div class="text-center text-small">No episodes available</div>';
                     } else {
                         const seasons = Object.keys(data.episodes).sort((a, b) => a - b);
                         list.innerHTML = seasons.map(s => {
@@ -619,13 +623,14 @@
                                 const ep = JSON.parse(item.dataset.ep);
                                 const ser = JSON.parse(item.dataset.series);
                                 this.playEpisode(ep, ser);
-                                this.hide('episodesModal');
+                                this.closeModal('episodesModal');
                             };
                         });
+                        this.notify(`✅ Loaded ${Object.keys(data.episodes).length} seasons`, 'success');
                     }
                     document.getElementById('episodesModal').classList.add('active');
                 } catch (error) {
-                    this.notify('Failed to load episodes', 'error');
+                    this.notify('❌ Failed to load episodes', 'error');
                 }
             },
 
@@ -672,6 +677,8 @@
                 document.getElementById('channelName').textContent = name;
                 document.getElementById('channelCat').textContent = this.getCatName(catId);
 
+                this.notify(`▶️ Playing: ${name}`, 'info');
+
                 setTimeout(() => {
                     if (url.includes('.m3u8')) {
                         if (Hls.isSupported()) {
@@ -679,16 +686,16 @@
                             this.state.hls.loadSource(url);
                             this.state.hls.attachMedia(player);
                             this.state.hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                                player.play().catch(err => this.notify('Playback failed', 'error'));
+                                player.play().catch(err => this.notify('❌ Playback failed', 'error'));
                             });
                             this.state.hls.on(Hls.Events.ERROR, (e, data) => {
-                                if (data.fatal) this.notify('Stream error', 'error');
+                                if (data.fatal) this.notify('❌ Stream error occurred', 'error');
                             });
                         }
                     } else {
                         player.src = url;
                         player.load();
-                        player.play().catch(err => this.notify('Playback failed', 'error'));
+                        player.play().catch(err => this.notify('❌ Playback failed', 'error'));
                     }
                 }, 100);
             },
@@ -705,10 +712,10 @@
             toggleFav(id) {
                 if (this.state.favorites.has(id)) {
                     this.state.favorites.delete(id);
-                    this.notify('Removed from favorites', 'info');
+                    this.notify('⭐ Removed from favorites', 'info');
                 } else {
                     this.state.favorites.add(id);
-                    this.notify('Added to favorites', 'success');
+                    this.notify('⭐ Added to favorites', 'success');
                 }
                 this.saveFavorites();
                 this.updateFavCount();
@@ -729,11 +736,11 @@
             },
 
             showFavorites() {
-                const favs = this.state.channels.filter(c => this.state.favorites.has(this.getId(c)));
+                const favs = this.state.allChannels.filter(c => this.state.favorites.has(this.getId(c)));
                 const list = document.getElementById('favList');
                 
                 if (favs.length === 0) {
-                    list.innerHTML = '<div class="text-center text-small">No favorites</div>';
+                    list.innerHTML = '<div class="text-center text-small">No favorites yet<br><br>Star channels to add them here</div>';
                 } else {
                     list.innerHTML = favs.map(ch => {
                         const name = this.escape(ch.name || ch.title || 'Unknown');
@@ -747,11 +754,12 @@
                         item.onclick = () => {
                             const ch = JSON.parse(item.dataset.ch);
                             this.state.type === 'series' ? this.showEpisodes(ch) : this.play(ch);
-                            this.hide('favModal');
+                            this.closeModal('favModal');
                         };
                     });
                 }
                 document.getElementById('favModal').classList.add('active');
+                this.notify(`⭐ Showing ${favs.length} favorite channels`, 'info');
             },
 
             showShare() {
@@ -768,43 +776,12 @@
             async generateUrl() {
                 const password = document.getElementById('sharePassword').value;
                 if (!password || password.length < 4) {
-                    this.notify('Password must be 4+ characters', 'error');
+                    this.notify('⚠️ Password must be at least 4 characters', 'warning');
                     return;
                 }
 
                 try {
-                    // Check if crypto.subtle is available (requires HTTPS or localhost)
-                    if (!window.crypto || !window.crypto.subtle) {
-                        this.notify('Encryption requires HTTPS or localhost. Using base64 encoding instead.', 'info');
-                        
-                        // Fallback: Simple base64 encoding with password hint
-                        const config = { 
-                            credentials: this.state.creds, 
-                            favorites: [...this.state.favorites],
-                            _pass: btoa(password) // Store password hint
-                        };
-                        const encoded = btoa(JSON.stringify(config));
-                        
-                        let baseUrl = '';
-                        if (location.protocol === 'file:') {
-                            baseUrl = location.href.split('?')[0];
-                        } else {
-                            baseUrl = `${location.origin}${location.pathname}`;
-                        }
-                        
-                        const url = `${baseUrl}?config=${encodeURIComponent(encoded)}`;
-                        
-                        document.getElementById('shareUrl').textContent = url;
-                        document.getElementById('sharePass').textContent = password;
-                        document.getElementById('shareStep1').classList.add('hidden');
-                        document.getElementById('shareStep2').classList.remove('hidden');
-                        this.notify('URL generated (encoded, not encrypted)', 'info');
-                        return;
-                    }
-
-                    // Full AES-256 encryption (HTTPS/localhost only)
-                    const config = { credentials: this.state.creds, favorites: [...this.state.favorites] };
-                    const encrypted = await this.encryptData(JSON.stringify(config), password);
+                    this.notify('🔒 Generating encrypted URL...', 'info');
                     
                     let baseUrl = '';
                     if (location.protocol === 'file:') {
@@ -812,32 +789,66 @@
                     } else {
                         baseUrl = `${location.origin}${location.pathname}`;
                     }
-                    
+
+                    if (!window.crypto || !window.crypto.subtle) {
+                        const config = { 
+                            credentials: this.state.creds, 
+                            favorites: [...this.state.favorites],
+                            _pass: btoa(password)
+                        };
+                        const encoded = btoa(JSON.stringify(config));
+                        const url = `${baseUrl}?config=${encodeURIComponent(encoded)}`;
+                        
+                        document.getElementById('shareUrl').textContent = url;
+                        document.getElementById('sharePass').textContent = password;
+                        document.getElementById('shareStep1').classList.add('hidden');
+                        document.getElementById('shareStep2').classList.remove('hidden');
+                        this.notify('✅ URL generated (Base64 encoded)', 'success');
+                        return;
+                    }
+
+                    const config = { credentials: this.state.creds, favorites: [...this.state.favorites] };
+                    const encrypted = await this.encryptData(JSON.stringify(config), password);
                     const url = `${baseUrl}?config=${encodeURIComponent(encrypted)}`;
                     
                     document.getElementById('shareUrl').textContent = url;
                     document.getElementById('sharePass').textContent = password;
                     document.getElementById('shareStep1').classList.add('hidden');
                     document.getElementById('shareStep2').classList.remove('hidden');
-                    this.notify('URL generated!', 'success');
+                    this.notify('✅ Encrypted URL generated successfully!', 'success');
                 } catch (error) {
                     console.error('Generate URL error:', error);
-                    this.notify('Failed to generate: ' + error.message, 'error');
+                    this.notify('❌ Failed to generate URL: ' + error.message, 'error');
                 }
             },
 
             async copyUrl() {
                 const url = document.getElementById('shareUrl').textContent;
                 try {
-                    await navigator.clipboard.writeText(url);
-                    this.notify('Copied!', 'success');
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(url);
+                        this.notify('✅ URL copied to clipboard!', 'success');
+                    } else {
+                        const textarea = document.createElement('textarea');
+                        textarea.value = url;
+                        textarea.style.position = 'fixed';
+                        textarea.style.opacity = '0';
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textarea);
+                        this.notify('✅ URL copied to clipboard!', 'success');
+                    }
                 } catch (error) {
-                    this.notify('Copy failed', 'error');
+                    console.error('Copy error:', error);
+                    this.notify('❌ Failed to copy URL. Please copy manually.', 'error');
                 }
             },
 
             testUrl() {
-                window.open(document.getElementById('shareUrl').textContent, '_blank');
+                const url = document.getElementById('shareUrl').textContent;
+                window.open(url, '_blank');
+                this.notify('🔗 Opening URL in new tab...', 'info');
             },
 
             async encryptData(text, password) {
@@ -883,17 +894,29 @@
                     }
                 });
 
+                this.notify(`📺 Switching to ${type === 'live' ? 'Live TV' : type === 'movies' ? 'Movies' : 'Series'}...`, 'info');
                 this.loadCategories();
                 this.loadChannels();
             },
 
             changeCategory(cat) {
                 this.state.category = cat;
+                this.notify('📂 Loading category...', 'info');
                 this.loadChannels();
             },
 
             handleSearch(query) {
-                this.state.search = query.toLowerCase();
+                this.state.search = query.trim();
+                
+                if (this.state.search) {
+                    this.state.channels = this.state.allChannels.filter(c => 
+                        (c.name || c.title || '').toLowerCase().includes(this.state.search.toLowerCase())
+                    );
+                    this.notify(`🔍 Searching in ${this.state.allChannels.length} channels...`, 'info');
+                } else {
+                    this.state.channels = [...this.state.allChannels];
+                }
+                
                 this.resetPage();
                 this.renderChannels();
             },
@@ -909,16 +932,17 @@
                 this.state.creds = null;
                 this.state.userInfo = null;
                 this.state.channels = [];
+                this.state.allChannels = [];
                 this.state.categories = [];
                 this.state.cache = {};
                 if (this.state.hls) this.state.hls.destroy();
                 document.getElementById('mainApp').classList.add('hidden');
                 document.getElementById('loginModal').classList.add('active');
                 document.getElementById('player').src = '';
-                this.notify('Logged out', 'info');
+                this.notify('👋 Logged out successfully', 'info');
             },
 
-            hide(id) {
+            closeModal(id) {
                 document.getElementById(id).classList.remove('active');
             },
 
@@ -930,7 +954,7 @@
                 setTimeout(() => {
                     div.classList.add('hiding');
                     setTimeout(() => div.remove(), 300);
-                }, 3000);
+                }, 3500);
             },
 
             escape(str) {
