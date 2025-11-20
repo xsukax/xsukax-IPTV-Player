@@ -4,179 +4,254 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>xsukax IPTV Player</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: #ffffff; color: #24292f; }
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(31, 35, 40, 0.7); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
-        .modal-overlay.active { display: flex; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: #ffffff; color: #24292f; line-height: 1.5; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(31, 35, 40, 0.7); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border-radius: 8px; padding: 32px; max-width: 500px; width: 90%; border: 1px solid #d0d7de; box-shadow: 0 16px 32px rgba(31, 35, 40, 0.15); }
+        .modal-content-large { max-width: 900px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
         .notification { position: fixed; top: 20px; right: 20px; background: #ffffff; color: #24292f; padding: 16px 24px; border-radius: 6px; box-shadow: 0 8px 16px rgba(31, 35, 40, 0.2); border: 1px solid #d0d7de; z-index: 2000; animation: slideIn 0.3s ease-out; max-width: 400px; }
         .notification.success { border-left: 4px solid #1a7f37; }
         .notification.error { border-left: 4px solid #cf222e; }
         .notification.info { border-left: 4px solid #0969da; }
+        .notification.hiding { animation: slideOut 0.3s ease-in; }
         @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(400px); opacity: 0; } }
-        .notification.hiding { animation: slideOut 0.3s ease-in; }
-        video { width: 100%; height: 100%; background: #000; }
-        button:focus, input:focus, select:focus { outline: 3px solid #0969da; outline-offset: 2px; }
-        .channel-item { transition: all 0.15s; cursor: pointer; }
+        h1 { font-size: 24px; font-weight: 700; margin: 0; }
+        h2 { font-size: 20px; font-weight: 700; margin: 0 0 16px 0; }
+        h3 { font-size: 16px; font-weight: 600; margin: 0; }
+        label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #24292f; }
+        input, select { width: 100%; padding: 12px 16px; background: #ffffff; border: 1px solid #d0d7de; border-radius: 6px; color: #24292f; font-size: 16px; transition: all 0.15s; }
+        input:focus, select:focus { outline: none; border-color: #0969da; box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.1); }
+        .btn { padding: 8px 16px; border: 1px solid #d0d7de; border-radius: 6px; font-weight: 500; cursor: pointer; transition: all 0.15s; font-size: 14px; }
+        .btn-primary { background: #0969da; color: white; border-color: #0969da; }
+        .btn-primary:hover { background: #0860ca; border-color: #0860ca; }
+        .btn-secondary { background: #f6f8fa; color: #24292f; }
+        .btn-secondary:hover { background: #f3f4f6; border-color: #afb8c1; }
+        .btn-danger { background: #cf222e; color: white; border-color: #cf222e; }
+        .btn-danger:hover { background: #b5212e; border-color: #b5212e; }
+        .btn-success { background: #1a7f37; color: white; border-color: #1a7f37; }
+        .btn-success:hover { background: #1a7731; border-color: #1a7731; }
+        .btn-full { width: 100%; padding: 12px 24px; font-size: 16px; font-weight: 600; }
+        .form-group { margin-bottom: 16px; }
+        .text-center { text-align: center; }
+        .text-small { font-size: 14px; color: #57606a; }
+        .mb-2 { margin-bottom: 8px; }
+        .mb-4 { margin-bottom: 16px; }
+        .mt-4 { margin-top: 16px; }
+        .flex { display: flex; }
+        .flex-wrap { flex-wrap: wrap; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .justify-end { justify-end: flex-end; }
+        .gap-2 { gap: 8px; }
+        .gap-3 { gap: 12px; }
+        .gap-4 { gap: 16px; }
+        header { background: white; border-bottom: 1px solid #d0d7de; padding: 16px 24px; box-shadow: 0 1px 0 rgba(31, 35, 40, 0.04); }
+        .header-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+        .header-buttons { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; background: #f6f8fa; color: #24292f; border: 1px solid #d0d7de; }
+        .badge-primary { background: #ddf4ff; color: #0969da; border-color: #c1dff8; }
+        .badge-success { background: #dafbe1; color: #1a7f37; border-color: #c2e8ce; }
+        .badge-warning { background: #fff8c5; color: #9a6700; border-color: #f4e8aa; }
+        .badge-danger { background: #ffebe9; color: #cf222e; border-color: #ffd8d3; }
+        nav { background: #f6f8fa; border-bottom: 1px solid #d0d7de; padding: 12px 24px; }
+        .tabs { display: flex; gap: 8px; }
+        .tab { padding: 8px 24px; border-radius: 6px; font-weight: 500; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; }
+        .tab.active { background: #0969da; color: white; }
+        .tab.inactive { background: white; color: #57606a; border-color: #d0d7de; }
+        .tab.inactive:hover { background: #f6f8fa; }
+        .container { display: flex; flex-direction: column; height: calc(100vh - 160px); }
+        .sidebar { width: 100%; background: #f6f8fa; border-right: 1px solid #d0d7de; display: flex; flex-direction: column; }
+        .sidebar-section { padding: 16px; border-bottom: 1px solid #d0d7de; background: white; }
+        .channels-list { flex: 1; overflow-y: auto; padding: 16px; }
+        .channel-item { background: white; border-radius: 6px; padding: 16px; margin-bottom: 8px; border: 1px solid #d0d7de; cursor: pointer; transition: all 0.15s; }
         .channel-item:hover { background: #f6f8fa; transform: translateY(-1px); box-shadow: 0 3px 8px rgba(31, 35, 40, 0.12); }
-        .episode-item { transition: all 0.15s; cursor: pointer; }
-        .episode-item:hover { background: #f6f8fa; border-color: #0969da; }
+        .channel-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+        .channel-info { flex: 1; min-width: 0; }
+        .channel-name { font-weight: 600; font-size: 16px; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .fav-btn { font-size: 24px; cursor: pointer; border: none; background: none; padding: 0; transition: all 0.15s; }
+        .fav-btn.active { color: #bf8700; }
+        .fav-btn.inactive { color: #d0d7de; }
+        .fav-btn:hover { transform: scale(1.1); }
+        .player-container { flex: 1; background: #000; position: relative; display: flex; align-items: center; justify-content: center; }
+        .placeholder { text-align: center; color: #9ca3af; }
+        .placeholder-icon { font-size: 64px; margin-bottom: 16px; }
+        video { width: 100%; height: 100%; background: #000; }
+        .video-info { position: absolute; top: 16px; left: 16px; background: rgba(255, 255, 255, 0.95); padding: 12px 16px; border-radius: 6px; border: 1px solid #d0d7de; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
         .scrollable { overflow-y: auto; scrollbar-width: thin; scrollbar-color: #d0d7de #f6f8fa; }
         .scrollable::-webkit-scrollbar { width: 10px; }
         .scrollable::-webkit-scrollbar-track { background: #f6f8fa; }
         .scrollable::-webkit-scrollbar-thumb { background: #d0d7de; border-radius: 5px; }
-        .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; background: #ddf4ff; color: #0969da; }
-        .mini-loader { display: inline-block; border: 2px solid #f6f8fa; border-top-color: #0969da; border-radius: 50%; width: 16px; height: 16px; animation: spin 0.6s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .btn-primary { background: #0969da; color: white; transition: all 0.15s; }
-        .btn-primary:hover { background: #0860ca; }
-        .btn-secondary { background: #f6f8fa; color: #24292f; border: 1px solid #d0d7de; transition: all 0.15s; }
-        .btn-secondary:hover { background: #f3f4f6; }
-        .btn-danger { background: #cf222e; color: white; transition: all 0.15s; }
-        .btn-danger:hover { background: #b5212e; }
-        .btn-success { background: #1a7f37; color: white; transition: all 0.15s; }
-        .btn-success:hover { background: #1a7731; }
-        .tab-active { background: #0969da; color: white; }
-        .tab-inactive { background: #ffffff; color: #57606a; border: 1px solid #d0d7de; }
-        .tab-inactive:hover { background: #f6f8fa; }
-        .skeleton { background: linear-gradient(90deg, #f6f8fa 25%, #eaeef2 50%, #f6f8fa 75%); background-size: 200% 100%; animation: loading 1.5s infinite; border-radius: 6px; }
+        .scrollable::-webkit-scrollbar-thumb:hover { background: #afb8c1; }
+        .skeleton { background: linear-gradient(90deg, #f6f8fa 25%, #eaeef2 50%, #f6f8fa 75%); background-size: 200% 100%; animation: loading 1.5s infinite; border-radius: 6px; height: 20px; }
         @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-        .load-more { width: 100%; padding: 12px; background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; cursor: pointer; transition: all 0.15s; }
+        .skeleton.h-12 { height: 48px; }
+        .skeleton.h-8 { height: 32px; }
+        .skeleton.w-75 { width: 75%; }
+        .skeleton.w-25 { width: 25%; }
+        .load-more { width: 100%; padding: 12px; background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; cursor: pointer; text-align: center; transition: all 0.15s; margin-top: 8px; }
         .load-more:hover { background: #f3f4f6; }
         .season-header { background: #f6f8fa; padding: 12px; border-radius: 6px; margin-bottom: 8px; font-weight: 600; }
+        .episode-item { background: white; border-radius: 6px; padding: 16px; margin-bottom: 8px; border: 1px solid #d0d7de; cursor: pointer; transition: all 0.15s; }
+        .episode-item:hover { background: #f6f8fa; border-color: #0969da; }
+        .close-btn { background: none; border: none; font-size: 32px; color: #57606a; cursor: pointer; padding: 0; line-height: 1; }
+        .close-btn:hover { color: #24292f; }
+        .code-box { background: #f6f8fa; padding: 16px; border-radius: 6px; border: 1px solid #d0d7de; word-break: break-all; }
+        .code-text { font-size: 14px; color: #0969da; font-family: monospace; }
+        .hidden { display: none; }
+        .flex-1 { flex: 1; }
+        .overflow-hidden { overflow: hidden; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .mini-loader { display: inline-block; border: 2px solid #f6f8fa; border-top-color: #0969da; border-radius: 50%; width: 16px; height: 16px; animation: spin 0.6s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (min-width: 1024px) { .container { flex-direction: row; } .sidebar { width: 384px; } }
+        @media (max-width: 768px) { .header-content { flex-direction: column; } .tabs { flex-wrap: wrap; } }
     </style>
 </head>
 <body>
     <div id="notifications"></div>
 
     <!-- Login Modal -->
-    <div id="loginModal" class="modal-overlay active">
-        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4 border border-gray-300 shadow-2xl">
-            <div class="text-center mb-6">
-                <h1 class="text-3xl font-bold text-gray-900 mb-2">xsukax IPTV Player</h1>
-                <p class="text-sm text-gray-600">If your IPTV Server uses http (not https)</p>
-                <p class="text-sm text-gray-600">Download index.html file and use it from your PC</p>
+    <div id="loginModal" class="modal active">
+        <div class="modal-content">
+            <div class="text-center mb-4">
+                <h1>xsukax IPTV Player</h1>
+                <p class="text-small">If your IPTV Server uses http (not https)</p>
+				<p class="text-small">Download index.html file and use it from your PC</p>
             </div>
-            <form id="loginForm" class="space-y-4">
-                <div><label class="block text-sm font-semibold mb-2 text-gray-700">Server URL</label><input type="text" id="serverUrl" placeholder="http://example.com:8080" required class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 focus:border-blue-500 text-lg"></div>
-                <div><label class="block text-sm font-semibold mb-2 text-gray-700">Username</label><input type="text" id="username" required class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 focus:border-blue-500 text-lg"></div>
-                <div><label class="block text-sm font-semibold mb-2 text-gray-700">Password</label><input type="password" id="password" required class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 focus:border-blue-500 text-lg"></div>
-                <button type="submit" class="w-full btn-primary font-bold py-3 px-6 rounded-lg text-lg">Connect</button>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Server URL</label>
+                    <input type="text" id="serverUrl" placeholder="http://example.com:8080" required>
+                </div>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">Connect</button>
             </form>
         </div>
     </div>
 
     <!-- Password Modal -->
-    <div id="passwordModal" class="modal-overlay">
-        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4 border border-gray-300 shadow-2xl">
-            <h2 class="text-2xl font-bold text-gray-900 mb-4">🔐 Enter Password</h2>
-            <form id="passwordForm" class="space-y-4">
-                <input type="password" id="decryptPassword" placeholder="Enter decryption password" required class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 focus:border-blue-500 text-lg">
-                <button type="submit" class="w-full btn-primary font-bold py-3 px-6 rounded-lg text-lg">Decrypt</button>
+    <div id="passwordModal" class="modal">
+        <div class="modal-content">
+            <h2>🔐 Enter Password</h2>
+            <form id="passwordForm">
+                <div class="form-group">
+                    <input type="password" id="decryptPassword" placeholder="Enter decryption password" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">Decrypt</button>
             </form>
         </div>
     </div>
 
     <!-- Main App -->
-    <div id="mainApp" style="display: none;">
-        <header class="bg-white border-b border-gray-300 px-6 py-4 shadow-sm">
-            <div class="flex items-center justify-between flex-wrap gap-4">
+    <div id="mainApp" class="hidden">
+        <header>
+            <div class="header-content">
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-900">xsukax IPTV Player</h1>
-                    <p class="text-sm text-gray-600">Fast Streaming | Works on Chrome & Edge</p>
+                    <h1>xsukax IPTV Player</h1>
+                    <p class="text-small">Fast Streaming | Works on Chrome & Edge</p>
                 </div>
-                <div class="flex items-center gap-3 flex-wrap">
-                    <span id="userInfo" class="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full"></span>
-                    <span id="expiryInfo" class="text-sm text-gray-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200"></span>
-                    <button id="shareBtn" class="btn-primary px-4 py-2 rounded-lg">Share</button>
-                    <button id="favBtn" class="btn-success px-4 py-2 rounded-lg">Favorites <span id="favCount" class="ml-1 bg-white text-green-700 px-2 py-0.5 rounded-full text-xs">0</span></button>
-                    <button id="logoutBtn" class="btn-danger px-4 py-2 rounded-lg">Logout</button>
+                <div class="header-buttons">
+                    <span id="userInfo" class="badge"></span>
+                    <span id="expiryInfo" class="badge badge-primary"></span>
+                    <button id="shareBtn" class="btn btn-primary">Share</button>
+                    <button id="favBtn" class="btn btn-success">Favorites <span id="favCount" class="badge-success">0</span></button>
+                    <button id="logoutBtn" class="btn btn-danger">Logout</button>
                 </div>
             </div>
         </header>
 
-        <nav class="bg-gray-50 border-b border-gray-300 px-6 py-3">
-            <div class="flex gap-2">
-                <button data-type="live" class="type-btn tab-active px-6 py-2 rounded-lg font-medium">📺 Live TV</button>
-                <button data-type="movies" class="type-btn tab-inactive px-6 py-2 rounded-lg font-medium">🎬 Movies</button>
-                <button data-type="series" class="type-btn tab-inactive px-6 py-2 rounded-lg font-medium">📺 Series</button>
+        <nav>
+            <div class="tabs">
+                <button data-type="live" class="tab active">📺 Live TV</button>
+                <button data-type="movies" class="tab inactive">🎬 Movies</button>
+                <button data-type="series" class="tab inactive">📺 Series</button>
             </div>
         </nav>
 
-        <div class="flex flex-col lg:flex-row" style="height: calc(100vh - 160px);">
-            <aside class="w-full lg:w-96 bg-gray-50 border-r border-gray-300 flex flex-col">
-                <div class="p-4 border-b border-gray-300 bg-white">
-                    <input type="search" id="searchInput" placeholder="🔍 Search..." class="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg">
+        <div class="container">
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <input type="search" id="searchInput" placeholder="🔍 Search...">
                 </div>
-                <div class="p-4 border-b border-gray-300 bg-white">
-                    <select id="categorySelect" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg">
+                <div class="sidebar-section">
+                    <select id="categorySelect">
                         <option value="all">All Categories</option>
                     </select>
                 </div>
-                <div id="channelsList" class="flex-1 overflow-y-auto scrollable p-4"></div>
+                <div id="channelsList" class="channels-list scrollable"></div>
             </aside>
 
-            <main class="flex-1 bg-black relative flex items-center justify-center">
-                <div id="placeholder" class="text-center text-gray-400">
-                    <div class="text-6xl mb-4">📺</div>
-                    <p class="text-xl">Select a channel</p>
+            <main class="player-container">
+                <div id="placeholder" class="placeholder">
+                    <div class="placeholder-icon">📺</div>
+                    <p>Select a channel</p>
                 </div>
-                <video id="player" controls style="display: none;"></video>
-                <div id="videoInfo" class="absolute top-4 left-4 bg-white bg-opacity-95 px-4 py-3 rounded-lg shadow-lg" style="display: none;">
-                    <h3 id="channelName" class="font-bold text-lg text-gray-900"></h3>
-                    <p id="channelCat" class="text-sm text-gray-600"></p>
+                <video id="player" controls class="hidden"></video>
+                <div id="videoInfo" class="video-info hidden">
+                    <h3 id="channelName"></h3>
+                    <p class="text-small" id="channelCat"></p>
                 </div>
             </main>
         </div>
     </div>
 
     <!-- Episodes Modal -->
-    <div id="episodesModal" class="modal-overlay">
-        <div class="bg-white rounded-lg p-8 max-w-4xl w-full mx-4 border border-gray-300 shadow-2xl max-h-screen overflow-hidden flex flex-col">
-            <div class="flex justify-between mb-4">
-                <h2 id="seriesTitle" class="text-2xl font-bold text-gray-900"></h2>
-                <button id="closeEpisodes" class="text-gray-500 hover:text-gray-900 text-2xl">&times;</button>
+    <div id="episodesModal" class="modal">
+        <div class="modal-content modal-content-large">
+            <div class="modal-header">
+                <h2 id="seriesTitle"></h2>
+                <button id="closeEpisodes" class="close-btn">&times;</button>
             </div>
-            <div id="episodesList" class="flex-1 overflow-y-auto scrollable"></div>
+            <div id="episodesList" class="flex-1 scrollable"></div>
         </div>
     </div>
 
     <!-- Share Modal -->
-    <div id="shareModal" class="modal-overlay">
-        <div class="bg-white rounded-lg p-8 max-w-2xl w-full mx-4 border border-gray-300 shadow-2xl">
-            <h2 class="text-2xl font-bold mb-4 text-gray-900">🔗 Share Configuration</h2>
-            <div id="shareStep1" class="space-y-4">
-                <p class="text-gray-600">Set a password to encrypt your configuration</p>
-                <input type="password" id="sharePassword" placeholder="Enter password" class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg">
-                <button id="generateBtn" class="w-full btn-primary px-6 py-3 rounded-lg">Generate URL</button>
+    <div id="shareModal" class="modal">
+        <div class="modal-content">
+            <h2>🔗 Share Configuration</h2>
+            <div id="shareStep1">
+                <p class="text-small mb-4">Set a password to encrypt your configuration</p>
+                <div class="form-group">
+                    <input type="password" id="sharePassword" placeholder="Enter password">
+                </div>
+                <button id="generateBtn" class="btn btn-primary btn-full">Generate URL</button>
             </div>
-            <div id="shareStep2" style="display: none;" class="space-y-4">
-                <div class="bg-gray-50 p-4 rounded-lg border border-gray-300 break-all">
-                    <code id="shareUrl" class="text-sm text-blue-600"></code>
+            <div id="shareStep2" class="hidden">
+                <div class="code-box mb-4">
+                    <code id="shareUrl" class="code-text"></code>
                 </div>
-                <p class="text-sm text-gray-600">Password: <strong id="sharePass" class="text-gray-900"></strong></p>
-                <div class="flex gap-3">
-                    <button id="copyBtn" class="flex-1 btn-success px-6 py-2 rounded-lg">Copy URL</button>
-                    <button id="testBtn" class="flex-1 btn-primary px-6 py-2 rounded-lg">Test URL</button>
+                <p class="text-small mb-4">Password: <strong id="sharePass"></strong></p>
+                <div class="flex gap-3 mb-4">
+                    <button id="copyBtn" class="btn btn-success flex-1">Copy URL</button>
+                    <button id="testBtn" class="btn btn-primary flex-1">Test URL</button>
                 </div>
-                <button id="backBtn" class="w-full btn-secondary px-6 py-2 rounded-lg">New URL</button>
+                <button id="backBtn" class="btn btn-secondary btn-full">New URL</button>
             </div>
             <div class="mt-4 flex justify-end">
-                <button id="closeShare" class="btn-secondary px-6 py-2 rounded-lg">Close</button>
+                <button id="closeShare" class="btn btn-secondary">Close</button>
             </div>
         </div>
     </div>
 
     <!-- Favorites Modal -->
-    <div id="favModal" class="modal-overlay">
-        <div class="bg-white rounded-lg p-8 max-w-4xl w-full mx-4 border border-gray-300 shadow-2xl max-h-screen overflow-hidden flex flex-col">
-            <h2 class="text-2xl font-bold mb-4 text-gray-900">⭐ Favorites</h2>
-            <div id="favList" class="flex-1 overflow-y-auto scrollable space-y-2"></div>
+    <div id="favModal" class="modal">
+        <div class="modal-content modal-content-large">
+            <h2 class="mb-4">⭐ Favorites</h2>
+            <div id="favList" class="flex-1 scrollable"></div>
             <div class="mt-4 flex justify-end">
-                <button id="closeFav" class="btn-secondary px-6 py-2 rounded-lg">Close</button>
+                <button id="closeFav" class="btn btn-secondary">Close</button>
             </div>
         </div>
     </div>
@@ -222,7 +297,7 @@
                 document.getElementById('searchInput').oninput = (e) => this.handleSearch(e.target.value);
                 document.getElementById('categorySelect').onchange = (e) => this.changeCategory(e.target.value);
 
-                document.querySelectorAll('.type-btn').forEach(btn => {
+                document.querySelectorAll('.tab').forEach(btn => {
                     btn.onclick = () => this.switchType(btn.dataset.type);
                 });
 
@@ -244,13 +319,36 @@
                 const password = document.getElementById('decryptPassword').value;
                 try {
                     this.notify('Decrypting...', 'info');
-                    const decrypted = await this.decryptData(this.state.pendingConfig, password);
-                    const config = JSON.parse(decrypted);
+                    
+                    let config;
+                    
+                    // Try to detect if it's base64 encoded (HTTP fallback) or AES encrypted
+                    try {
+                        // First, try simple base64 decode (HTTP fallback)
+                        const decoded = JSON.parse(atob(this.state.pendingConfig));
+                        if (decoded._pass) {
+                            // This is base64 encoded with password hint
+                            if (atob(decoded._pass) === password) {
+                                delete decoded._pass;
+                                config = decoded;
+                            } else {
+                                throw new Error('Wrong password');
+                            }
+                        } else {
+                            // Try AES decryption
+                            const decrypted = await this.decryptData(this.state.pendingConfig, password);
+                            config = JSON.parse(decrypted);
+                        }
+                    } catch (err) {
+                        // If base64 fails, try AES decryption
+                        const decrypted = await this.decryptData(this.state.pendingConfig, password);
+                        config = JSON.parse(decrypted);
+                    }
+                    
                     this.state.creds = config.credentials;
                     this.state.favorites = new Set(config.favorites || []);
                     this.saveFavorites();
                     
-                    // Fetch user info
                     try {
                         const url = this.buildUrl('player_api.php');
                         const res = await fetch(url);
@@ -265,8 +363,17 @@
                     this.hide('passwordModal');
                     await this.loadApp();
                     this.notify('Configuration loaded!', 'success');
-                    history.replaceState({}, '', location.pathname);
+                    
+                    // Clean URL (works for http, https, and file://)
+                    try {
+                        if (location.protocol !== 'file:') {
+                            history.replaceState({}, '', location.pathname);
+                        }
+                    } catch (err) {
+                        // Ignore history API errors
+                    }
                 } catch (error) {
+                    console.error('Decrypt error:', error);
                     this.notify('Wrong password', 'error');
                     document.getElementById('decryptPassword').value = '';
                 }
@@ -300,7 +407,7 @@
 
             async loadApp() {
                 this.hide('loginModal');
-                document.getElementById('mainApp').style.display = 'block';
+                document.getElementById('mainApp').classList.remove('hidden');
                 document.getElementById('userInfo').textContent = `👤 ${this.state.creds.username}`;
                 this.displayExpiry();
                 this.updateFavCount();
@@ -310,14 +417,14 @@
             displayExpiry() {
                 const expiryEl = document.getElementById('expiryInfo');
                 if (!this.state.userInfo || !this.state.userInfo.exp_date) {
-                    expiryEl.style.display = 'none';
+                    expiryEl.classList.add('hidden');
                     return;
                 }
 
                 const expTimestamp = parseInt(this.state.userInfo.exp_date);
                 if (!expTimestamp || expTimestamp === 0) {
                     expiryEl.textContent = '📅 Lifetime';
-                    expiryEl.style.display = 'inline-block';
+                    expiryEl.classList.remove('hidden');
                     return;
                 }
 
@@ -332,16 +439,16 @@
 
                 if (daysLeft < 0) {
                     expiryEl.textContent = `📅 Expired`;
-                    expiryEl.className = 'text-sm text-white bg-red-500 px-3 py-1 rounded-full';
+                    expiryEl.className = 'badge badge-danger';
                 } else if (daysLeft <= 7) {
                     expiryEl.textContent = `📅 Expires in ${daysLeft} days (${dateStr})`;
-                    expiryEl.className = 'text-sm text-gray-900 bg-yellow-100 px-3 py-1 rounded-full border border-yellow-300';
+                    expiryEl.className = 'badge badge-warning';
                 } else {
                     expiryEl.textContent = `📅 Valid until ${dateStr}`;
-                    expiryEl.className = 'text-sm text-gray-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200';
+                    expiryEl.className = 'badge badge-primary';
                 }
                 
-                expiryEl.style.display = 'inline-block';
+                expiryEl.classList.remove('hidden');
             },
 
             async loadCategories() {
@@ -387,7 +494,7 @@
                     this.resetPage();
                     this.renderChannels();
                 } catch (error) {
-                    document.getElementById('channelsList').innerHTML = '<div class="text-center text-gray-500 py-8">Failed to load</div>';
+                    document.getElementById('channelsList').innerHTML = '<div class="text-center text-small">Failed to load</div>';
                 }
             },
 
@@ -419,7 +526,7 @@
 
                 const container = document.getElementById('channelsList');
                 if (this.state.displayed.length === 0) {
-                    container.innerHTML = '<div class="text-center text-gray-500 py-8">No channels</div>';
+                    container.innerHTML = '<div class="text-center text-small">No channels</div>';
                     return;
                 }
 
@@ -427,13 +534,13 @@
                     const name = this.escape(ch.name || ch.title || 'Unknown');
                     const isFav = this.state.favorites.has(this.getId(ch));
                     return `
-                        <div class="channel-item bg-white rounded-lg p-4 mb-2 border border-gray-300" data-channel='${JSON.stringify(ch).replace(/'/g, "&apos;")}'>
-                            <div class="flex justify-between gap-3">
-                                <div class="flex-1">
-                                    <h3 class="font-semibold text-base mb-1 truncate text-gray-900">${name}</h3>
+                        <div class="channel-item" data-channel='${JSON.stringify(ch).replace(/'/g, "&apos;")}'>
+                            <div class="channel-header">
+                                <div class="channel-info">
+                                    <div class="channel-name">${name}</div>
                                     ${ch.stream_type ? `<span class="badge">${ch.stream_type}</span>` : ''}
                                 </div>
-                                <button class="fav-btn text-2xl" style="color: ${isFav ? '#bf8700' : '#d0d7de'}" data-id="${this.getId(ch)}" onclick="event.stopPropagation()">
+                                <button class="fav-btn ${isFav ? 'active' : 'inactive'}" data-id="${this.getId(ch)}" onclick="event.stopPropagation()">
                                     ${isFav ? '★' : '☆'}
                                 </button>
                             </div>
@@ -442,7 +549,7 @@
                 }).join('');
 
                 const hasMore = this.state.displayed.length < channels.length;
-                const loadMore = hasMore ? `<button class="load-more mt-2">Load More (${channels.length - this.state.displayed.length} remaining)</button>` : '';
+                const loadMore = hasMore ? `<button class="load-more">Load More (${channels.length - this.state.displayed.length} remaining)</button>` : '';
 
                 container.innerHTML = html + loadMore;
 
@@ -478,9 +585,9 @@
 
             showSkeleton() {
                 document.getElementById('channelsList').innerHTML = Array(5).fill(0).map(() => 
-                    `<div class="bg-white rounded-lg p-4 mb-2 border border-gray-300">
-                        <div class="skeleton h-5 w-3/4 mb-2"></div>
-                        <div class="skeleton h-4 w-1/4"></div>
+                    `<div class="channel-item">
+                        <div class="skeleton h-8 w-75 mb-2"></div>
+                        <div class="skeleton h-8 w-25"></div>
                     </div>`
                 ).join('');
             },
@@ -495,14 +602,14 @@
                     
                     const list = document.getElementById('episodesList');
                     if (!data.episodes || Object.keys(data.episodes).length === 0) {
-                        list.innerHTML = '<div class="text-center text-gray-500 py-8">No episodes</div>';
+                        list.innerHTML = '<div class="text-center text-small">No episodes</div>';
                     } else {
                         const seasons = Object.keys(data.episodes).sort((a, b) => a - b);
                         list.innerHTML = seasons.map(s => {
                             const eps = data.episodes[s];
                             return `<div class="season-header">Season ${s}</div>${eps.map(ep => 
-                                `<div class="episode-item bg-white rounded-lg p-4 mb-2 border border-gray-300" data-ep='${JSON.stringify(ep).replace(/'/g, "&apos;")}' data-series='${JSON.stringify(series).replace(/'/g, "&apos;")}'>
-                                    <h4 class="font-semibold text-gray-900">Ep ${ep.episode_num}: ${this.escape(ep.title || 'Untitled')}</h4>
+                                `<div class="episode-item" data-ep='${JSON.stringify(ep).replace(/'/g, "&apos;")}' data-series='${JSON.stringify(series).replace(/'/g, "&apos;")}'>
+                                    <h3>Ep ${ep.episode_num}: ${this.escape(ep.title || 'Untitled')}</h3>
                                 </div>`
                             ).join('')}`;
                         }).join('');
@@ -558,9 +665,9 @@
                 player.src = '';
                 player.load();
 
-                player.style.display = 'block';
-                placeholder.style.display = 'none';
-                info.style.display = 'block';
+                player.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                info.classList.remove('hidden');
 
                 document.getElementById('channelName').textContent = name;
                 document.getElementById('channelCat').textContent = this.getCatName(catId);
@@ -626,17 +733,17 @@
                 const list = document.getElementById('favList');
                 
                 if (favs.length === 0) {
-                    list.innerHTML = '<div class="text-center text-gray-500 py-8">No favorites</div>';
+                    list.innerHTML = '<div class="text-center text-small">No favorites</div>';
                 } else {
                     list.innerHTML = favs.map(ch => {
                         const name = this.escape(ch.name || ch.title || 'Unknown');
-                        return `<div class="bg-white rounded-lg p-4 border border-gray-300 hover:border-blue-500 cursor-pointer" data-ch='${JSON.stringify(ch).replace(/'/g, "&apos;")}'>
-                            <h3 class="font-semibold truncate text-gray-900">${name}</h3>
-                            <span class="badge">⭐ Favorite</span>
+                        return `<div class="channel-item" data-ch='${JSON.stringify(ch).replace(/'/g, "&apos;")}'>
+                            <h3 class="channel-name">${name}</h3>
+                            <span class="badge badge-success">⭐ Favorite</span>
                         </div>`;
                     }).join('');
 
-                    list.querySelectorAll('[data-ch]').forEach(item => {
+                    list.querySelectorAll('.channel-item').forEach(item => {
                         item.onclick = () => {
                             const ch = JSON.parse(item.dataset.ch);
                             this.state.type === 'series' ? this.showEpisodes(ch) : this.play(ch);
@@ -653,8 +760,8 @@
             },
 
             resetShare() {
-                document.getElementById('shareStep1').style.display = 'block';
-                document.getElementById('shareStep2').style.display = 'none';
+                document.getElementById('shareStep1').classList.remove('hidden');
+                document.getElementById('shareStep2').classList.add('hidden');
                 document.getElementById('sharePassword').value = '';
             },
 
@@ -666,17 +773,56 @@
                 }
 
                 try {
+                    // Check if crypto.subtle is available (requires HTTPS or localhost)
+                    if (!window.crypto || !window.crypto.subtle) {
+                        this.notify('Encryption requires HTTPS or localhost. Using base64 encoding instead.', 'info');
+                        
+                        // Fallback: Simple base64 encoding with password hint
+                        const config = { 
+                            credentials: this.state.creds, 
+                            favorites: [...this.state.favorites],
+                            _pass: btoa(password) // Store password hint
+                        };
+                        const encoded = btoa(JSON.stringify(config));
+                        
+                        let baseUrl = '';
+                        if (location.protocol === 'file:') {
+                            baseUrl = location.href.split('?')[0];
+                        } else {
+                            baseUrl = `${location.origin}${location.pathname}`;
+                        }
+                        
+                        const url = `${baseUrl}?config=${encodeURIComponent(encoded)}`;
+                        
+                        document.getElementById('shareUrl').textContent = url;
+                        document.getElementById('sharePass').textContent = password;
+                        document.getElementById('shareStep1').classList.add('hidden');
+                        document.getElementById('shareStep2').classList.remove('hidden');
+                        this.notify('URL generated (encoded, not encrypted)', 'info');
+                        return;
+                    }
+
+                    // Full AES-256 encryption (HTTPS/localhost only)
                     const config = { credentials: this.state.creds, favorites: [...this.state.favorites] };
                     const encrypted = await this.encryptData(JSON.stringify(config), password);
-                    const url = `${location.origin}${location.pathname}?config=${encodeURIComponent(encrypted)}`;
+                    
+                    let baseUrl = '';
+                    if (location.protocol === 'file:') {
+                        baseUrl = location.href.split('?')[0];
+                    } else {
+                        baseUrl = `${location.origin}${location.pathname}`;
+                    }
+                    
+                    const url = `${baseUrl}?config=${encodeURIComponent(encrypted)}`;
                     
                     document.getElementById('shareUrl').textContent = url;
                     document.getElementById('sharePass').textContent = password;
-                    document.getElementById('shareStep1').style.display = 'none';
-                    document.getElementById('shareStep2').style.display = 'block';
+                    document.getElementById('shareStep1').classList.add('hidden');
+                    document.getElementById('shareStep2').classList.remove('hidden');
                     this.notify('URL generated!', 'success');
                 } catch (error) {
-                    this.notify('Failed to generate', 'error');
+                    console.error('Generate URL error:', error);
+                    this.notify('Failed to generate: ' + error.message, 'error');
                 }
             },
 
@@ -727,8 +873,14 @@
                 this.state.search = '';
                 document.getElementById('searchInput').value = '';
                 
-                document.querySelectorAll('.type-btn').forEach(btn => {
-                    btn.className = btn.dataset.type === type ? 'type-btn tab-active px-6 py-2 rounded-lg font-medium' : 'type-btn tab-inactive px-6 py-2 rounded-lg font-medium';
+                document.querySelectorAll('.tab').forEach(btn => {
+                    if (btn.dataset.type === type) {
+                        btn.classList.remove('inactive');
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                        btn.classList.add('inactive');
+                    }
                 });
 
                 this.loadCategories();
@@ -760,7 +912,7 @@
                 this.state.categories = [];
                 this.state.cache = {};
                 if (this.state.hls) this.state.hls.destroy();
-                document.getElementById('mainApp').style.display = 'none';
+                document.getElementById('mainApp').classList.add('hidden');
                 document.getElementById('loginModal').classList.add('active');
                 document.getElementById('player').src = '';
                 this.notify('Logged out', 'info');
