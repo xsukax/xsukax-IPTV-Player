@@ -7,304 +7,221 @@ A lightweight, secure, and privacy-focused IPTV player that runs entirely in you
 [![HTML5](https://img.shields.io/badge/HTML5-E34F26?logo=html5&logoColor=white)](https://html.spec.whatwg.org/)
 [![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 
-## 🌟 Project Overview
+🌐 **Demo**: [http://iptv.xsukax.net](http://iptv.xsukax.net)
 
-**xsukax IPTV Player** is a single-file HTML application designed for streaming IPTV content directly in modern web browsers. Unlike traditional IPTV players that require backend servers or desktop installations, this player operates entirely client-side using vanilla JavaScript and HLS.js for adaptive streaming. It supports live TV channels, video-on-demand (VOD) movies, and episodic series content from Xtream Codes API-compatible IPTV providers.
+> **Note**: The demo uses HTTP (not HTTPS) to ensure compatibility with HTTP-based IPTV servers, as HTTPS pages cannot connect to insecure HTTP endpoints due to mixed content restrictions.
 
-The application emphasizes user privacy, security, and portability. All authentication credentials and user data are processed locally in the browser—no data is transmitted to third-party servers. Users can download the single `index.html` file and run it offline or host it on any web server without requiring additional dependencies or backend infrastructure.
+## 🎯 Project Overview
 
-### Key Capabilities
-- **Universal Compatibility**: Works with any IPTV service using the Xtream Codes API protocol
-- **Multi-Format Streaming**: Supports HLS (`.m3u8`) and direct video formats (`.mp4`, `.mkv`, etc.)
-- **Responsive Design**: Optimized for desktop and mobile browsers with adaptive layouts
-- **Offline Capability**: Download and run locally without internet connectivity (except for streaming)
-- **Zero Installation**: No plugins, extensions, or additional software required
+xsukax IPTV Player is a lightweight, single-file HTML application that enables users to stream IPTV content directly in their web browser without requiring server-side infrastructure or installation. The application interfaces with Xtream Codes API compatible IPTV services, providing an intuitive user experience for managing and consuming live television, video-on-demand content, and episodic series.
+
+Built with vanilla JavaScript and leveraging HLS.js for adaptive streaming, this player emphasizes performance, security, and user privacy while maintaining broad compatibility with modern web browsers.
 
 ## 🔒 Security and Privacy Benefits
 
-This application implements multiple layers of security and privacy protection to ensure your sensitive data remains confidential:
+### End-to-End Encryption for Configuration Sharing
+- **AES-256-GCM Encryption**: When supported by the browser (via Web Crypto API), all shared configurations are encrypted using industry-standard AES-256-GCM with PBKDF2 key derivation (100,000 iterations), ensuring credentials remain secure during transit and storage
+- **Base64 Encoding Fallback**: For browsers lacking Web Crypto API support, configurations are Base64-encoded with password protection, providing a basic security layer while maintaining functionality across all platforms
+- **Password-Protected Shares**: All shareable configuration URLs require a separate password for decryption, preventing unauthorized access even if the URL is intercepted
 
 ### Client-Side Architecture
-All operations execute within your browser's sandbox environment. Your IPTV credentials (server URL, username, password) are never transmitted to any external server except your chosen IPTV provider. There is no analytics tracking, no telemetry, and no third-party data collection.
+- **No Server Storage**: All authentication and streaming operations occur directly between the user's browser and their IPTV provider, eliminating intermediary data collection
+- **Zero Data Retention**: The application does not log, store, or transmit user credentials or viewing habits to any third-party servers
+- **Local-Only Persistence**: Favorites are stored exclusively in the browser's localStorage, remaining under complete user control
 
-### Encrypted Configuration Sharing
-The shareable URL feature allows you to share your IPTV configuration with trusted devices or users while maintaining security:
+### Secure Credential Handling
+- **Memory-Only Sessions**: Credentials are held in memory during active sessions and cleared upon logout
+- **No Automatic Persistence**: Login credentials are never saved to disk or localStorage without explicit user action (via encrypted sharing)
+- **URL Parameter Cleanup**: After loading encrypted configurations, sensitive URL parameters are automatically removed from browser history
 
-- **AES-256-GCM Encryption (HTTPS/Localhost)**: When accessed via HTTPS or localhost, the application uses industry-standard AES-256-GCM encryption with PBKDF2 key derivation (100,000 iterations). Your credentials are cryptographically protected with a user-defined password, ensuring that even if the URL is intercepted, the data remains unreadable without the decryption key.
-
-- **Base64 Encoding (HTTP Fallback)**: When accessed via HTTP or the `file://` protocol (where Web Crypto API is unavailable), the application falls back to Base64 encoding with password verification. While not cryptographically secure, this prevents casual exposure of credentials and maintains functionality across all environments.
-
-**Important**: Shareable URLs should only be transmitted through secure channels (encrypted messaging, password managers) and passwords should never be shared in the same message as the URL.
-
-### Local Data Storage
-Favorites and preferences are stored exclusively in your browser's `localStorage`. This data persists across sessions but remains isolated to your device and cannot be accessed by other websites or applications due to browser same-origin policies.
-
-### No External Dependencies
-The application loads only one external library (HLS.js from jsDelivr CDN) for adaptive streaming functionality. No tracking scripts, advertising networks, or analytics frameworks are included. All styling and logic are embedded within the single HTML file.
-
-### Credential Protection
-- Passwords are never logged to the browser console
-- No credential caching on the server side (because there is no server)
-- Automatic logout functionality clears sensitive data from memory
-- HTTPS enforcement recommended for production deployments
+### Privacy-First Design
+- **Direct Streaming**: Video content streams directly from IPTV providers to the user's browser without proxy servers
+- **Minimal Footprint**: Single-file architecture with no external dependencies beyond HLS.js and standard browser APIs
+- **Transparent Operation**: Open-source codebase allows full security auditing by the community
 
 ## ✨ Features and Advantages
 
 ### Core Functionality
-- **📺 Live TV Streaming**: Browse and watch live television channels with category filtering
-- **🎬 Video on Demand**: Access your provider's movie library with metadata and thumbnails
-- **📺 Series Support**: Watch episodic content organized by seasons and episodes
-- **⭐ Favorites Management**: Mark content as favorites for quick access across sessions
-- **🔍 Real-Time Search**: Instant filtering of channels/content by name
-- **📱 Responsive UI**: Clean, GitHub-inspired interface that adapts to any screen size
+- **Multi-Content Support**: Seamlessly switch between Live TV, Movies, and Series with dedicated interfaces for each content type
+- **Advanced Search**: Real-time search across all channels with instant results and match highlighting
+- **Category Filtering**: Organize content by categories provided by your IPTV service for efficient browsing
+- **Favorites Management**: Star your preferred channels for quick access across sessions
+- **Episode Browser**: Navigate series content with organized season and episode listings
 
-### Technical Advantages
-- **Single-File Deployment**: The entire application is contained in one `index.html` file—no build process, no dependencies to manage
+### Streaming Capabilities
 - **HLS Adaptive Streaming**: Automatic quality adjustment based on network conditions using HLS.js
-- **Lazy Loading**: Channels load progressively in batches of 50 for optimal performance
-- **Smart Caching**: API responses are cached in memory to minimize network requests
-- **Cross-Platform**: Works on Windows, macOS, Linux, Android, and iOS browsers
+- **Multiple Format Support**: Handles M3U8 streams for live content and direct MP4/MKV playback for VOD
+- **Low Latency Mode**: Optimized HLS configuration for reduced buffering and improved responsiveness
+- **Progressive Loading**: Pagination system loads content incrementally, ensuring fast initial page loads even with extensive channel lists
 
 ### User Experience
-- **Subscription Info Display**: View account expiration dates and status at a glance
-- **Category Organization**: Content organized by provider-defined categories
-- **Episode Metadata**: Detailed episode information including titles and numbering
-- **Skeleton Loaders**: Visual feedback during content loading for better perceived performance
-- **Toast Notifications**: Non-intrusive success/error messages for user actions
+- **Clean Modern UI**: GitHub-inspired design with intuitive navigation and responsive layout
+- **Real-Time Notifications**: Contextual feedback for all operations (success, error, warning, info)
+- **Subscription Status Display**: Visual indicators showing account expiry dates with color-coded urgency (lifetime, active, expiring soon, expired)
+- **Skeleton Loading**: Smooth placeholder animations during content fetching
+- **Mobile Responsive**: Adaptive layout optimized for desktop and mobile viewing
 
-### Privacy-Focused Design
-- **No Registration**: Use the player immediately without creating accounts
-- **No Tracking**: Zero analytics, cookies, or user behavior monitoring
-- **Open Source**: Complete transparency—audit the code yourself
-- **Data Portability**: Export/import configurations via shareable URLs
+### Technical Advantages
+- **Zero Installation**: Runs entirely in the browser with no plugins or extensions required
+- **Offline Capable**: Can be saved locally and used as a file:// URL without web hosting
+- **Caching System**: Intelligent category and channel caching reduces redundant API calls
+- **Cross-Browser Compatibility**: Works on Chrome, Edge, and other Chromium-based browsers
+- **Lightweight**: Single 50KB HTML file with minimal resource consumption
 
 ## 📦 Installation Instructions
 
-### Method 1: Direct Download (Recommended for HTTP IPTV Servers)
+### Option 1: Web Hosting (Recommended)
+1. Download the `index.html` file from this repository
+2. Upload to any web server or hosting provider
+3. Access via your domain (e.g., `http://yourdomain.com/index.html`)
+4. **Important**: Use HTTP protocol if your IPTV server uses HTTP to avoid mixed content issues
 
-1. **Download the Application**
-   ```bash
-   git clone https://github.com/xsukax/xsukax-IPTV-Player.git
-   cd xsukax-IPTV-Player
-   ```
-   Alternatively, download `index.html` directly from the [GitHub repository](https://github.com/xsukax/xsukax-IPTV-Player).
+### Option 2: GitHub Pages Deployment
+1. Fork this repository
+2. Navigate to **Settings** → **Pages**
+3. Select **Deploy from a branch** → Choose `main` branch → `/ (root)` folder
+4. Click **Save**
+5. Access your player at `https://yourusername.github.io/xsukax-IPTV-Player/`
+6. **Note**: GitHub Pages uses HTTPS, which may prevent connections to HTTP IPTV servers
 
-2. **Open Locally**
-   - Double-click `index.html` to open in your default browser
-   - Or right-click → Open With → Choose your preferred browser (Chrome, Edge, Firefox)
+### Option 3: Local File Usage
+1. Download `index.html` to your computer
+2. Open directly in Chrome or Edge browser (File → Open or double-click)
+3. No web server required; functions perfectly as a local file
+4. Shareable URLs generated in file mode will reference the local file path
 
-3. **Why Local?**
-   If your IPTV provider uses HTTP (not HTTPS) URLs, browsers will block mixed content when accessing from an HTTPS website. Running locally bypasses this restriction.
+### Option 4: Quick Start via Demo
+Simply visit [http://iptv.xsukax.net](http://iptv.xsukax.net) to use the application immediately without any installation.
 
-### Method 2: Web Hosting (For HTTPS IPTV Servers)
-
-1. **Upload to Web Server**
-   - Upload `index.html` to any web hosting service (GitHub Pages, Netlify, Vercel, etc.)
-   - Ensure HTTPS is enabled for full encryption functionality
-   - No server-side processing required—static hosting is sufficient
-
-2. **Access via Browser**
-   - Navigate to your hosted URL
-   - Add to browser bookmarks for quick access
-
-### Method 3: Try the Demo
-
-Visit the live demo at [http://iptv.xsukax.net](http://iptv.xsukax.net) to test the player without installation.
-
-**Note**: The demo uses HTTP (not HTTPS) to ensure compatibility with HTTP-based IPTV servers. Many IPTV providers still use HTTP endpoints, which browsers block when accessed from HTTPS pages due to mixed content security policies. For personal use with HTTPS IPTV servers, host the file yourself with SSL enabled.
-
-### Browser Compatibility
-
-| Browser | Minimum Version | Notes |
-|---------|----------------|-------|
-| Chrome | 87+ | ✅ Recommended |
-| Edge | 87+ | ✅ Recommended |
-| Firefox | 78+ | ✅ Supported |
-| Safari | 14+ | ⚠️ Limited HLS support |
-| Opera | 73+ | ✅ Supported |
-
-## 📖 Usage Guide
+## 🚀 Usage Guide
 
 ### Initial Setup
 
 ```mermaid
-graph LR
-    A[Open Player] --> B[Login Modal]
-    B --> C[Enter Credentials]
-    C --> D{Test Connection}
-    D -->|Success| E[Access Content]
-    D -->|Failed| B
-    E --> F[Browse & Stream]
+graph TD
+    A[Open Application] --> B{Encrypted URL?}
+    B -->|Yes| C[Enter Decryption Password]
+    B -->|No| D[Enter IPTV Credentials]
+    C --> E[Configuration Loaded]
+    D --> F[Validate Credentials]
+    F --> G{Valid?}
+    G -->|Yes| E
+    G -->|No| D
+    E --> H[Access Player Interface]
 ```
 
-1. **Launch the Application**
-   - Open `index.html` in a supported browser
-   - The login modal will appear automatically
+#### Connecting to Your IPTV Service
+1. **Manual Login**:
+   - Enter your IPTV server URL (e.g., `http://example.com:8080`)
+   - Provide your username and password
+   - Click **Connect** to authenticate
 
-2. **Enter IPTV Credentials**
-   - **Server URL**: Your provider's server address (e.g., `http://example.com:8080`)
-     - Remove trailing slashes
-     - Include the port number if required
-   - **Username**: Your account username
-   - **Password**: Your account password
+2. **Via Shared Configuration**:
+   - Open a shared URL (format: `http://iptv.xsukax.net?config=ENCRYPTED_DATA`)
+   - Enter the password provided by the person who shared the configuration
+   - Click **Decrypt** to load credentials and favorites
 
-3. **Connect**
-   - Click "Connect" to authenticate
-   - The application validates credentials with your IPTV provider
-   - Upon success, you'll see your subscription status and available content
-
-### Navigation and Content Discovery
+### Navigation Workflow
 
 ```mermaid
-graph TD
-    A[Main Interface] --> B[Content Tabs]
-    B --> C[📺 Live TV]
-    B --> D[🎬 Movies]
-    B --> E[📺 Series]
-    
-    C --> F[Category Filter]
-    D --> F
-    E --> F
-    
-    F --> G[Search Bar]
-    G --> H[Channel List]
-    H --> I{Content Type}
-    
-    I -->|Live/Movie| J[Play Stream]
-    I -->|Series| K[Episode Selector]
-    K --> J
+graph LR
+    A[Select Content Type] --> B[Live TV]
+    A --> C[Movies]
+    A --> D[Series]
+    B --> E[Choose Category]
+    C --> E
+    D --> E
+    E --> F[Search/Browse Channels]
+    F --> G[Select Channel]
+    G --> H{Content Type?}
+    H -->|Live/Movie| I[Stream Begins]
+    H -->|Series| J[Choose Episode]
+    J --> I
 ```
 
-**Content Tabs**
-- **📺 Live TV**: Browse live television channels by category
-- **🎬 Movies**: Access your provider's VOD movie collection
-- **📺 Series**: Watch episodic content organized by show and season
+#### Browsing Content
+1. **Switch Content Types**: Use the top navigation tabs (📺 Live TV | 🎬 Movies | 📺 Series)
+2. **Filter by Category**: Select from the category dropdown to narrow results
+3. **Search**: Type in the search box to find channels across all categories
+4. **Load More**: Scroll down or click "Load More" to view additional channels (50 per page)
 
-**Filtering and Search**
-- **Category Dropdown**: Filter content by provider-defined categories
-- **Search Bar**: Type to instantly filter results by name
-- **Favorites Button**: Quick access to your marked favorites
-
-### Playing Content
-
-**For Live TV and Movies:**
-1. Click any channel/movie in the list
-2. The video player loads automatically
-3. Use standard video controls (play/pause, volume, fullscreen)
-
-**For Series:**
-1. Click a series to open the episode browser
-2. Episodes are organized by season
-3. Click any episode to start playback
-4. The modal closes automatically when playing
+#### Playing Content
+- **Live TV & Movies**: Click any channel to begin streaming immediately
+- **Series**: Click a series → Select season and episode from the modal → Stream begins
+- **Video Controls**: Use standard HTML5 player controls (play, pause, volume, fullscreen)
 
 ### Managing Favorites
 
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant B as Browser
+    participant P as Player
     participant L as LocalStorage
     
-    U->>B: Click ⭐ Star Icon
-    B->>B: Toggle Favorite Status
-    B->>L: Save to localStorage
-    L-->>B: Confirm Storage
-    B->>U: Show Toast Notification
-    B->>B: Update UI (★/☆)
+    U->>P: Click Star Icon on Channel
+    P->>L: Save Favorite ID
+    L-->>P: Confirmation
+    P->>U: Show "Added to Favorites" Notification
+    U->>P: Click Favorites Button
+    P->>L: Retrieve Favorite IDs
+    L-->>P: Return IDs
+    P->>U: Display Filtered Favorites List
 ```
 
-- Click the **star icon (☆/★)** on any channel to add/remove favorites
-- Access all favorites via the **"Favorites"** button in the header
-- Favorites persist across browser sessions using localStorage
-- The favorite count badge updates in real-time
+- **Add Favorite**: Click the ☆ star icon on any channel card (turns gold ★)
+- **Remove Favorite**: Click the ★ gold star icon to unfavorite
+- **View All Favorites**: Click the **Favorites** button in the header to see your starred channels
+- **Persistence**: Favorites are stored locally and persist across sessions
 
-### Sharing Configurations
+### Sharing Your Configuration
 
-The shareable URL feature enables secure transfer of your IPTV configuration to other devices or trusted users.
+#### Understanding Encryption Methods
+The application uses different encryption methods based on browser capabilities:
 
 ```mermaid
-graph LR
-    A[Click Share] --> B{Environment}
-    B -->|HTTPS/Localhost| C[AES-256 Encryption]
-    B -->|HTTP/File| D[Base64 Encoding]
-    C --> E[Enter Password]
-    D --> E
-    E --> F[Generate URL]
-    F --> G[Copy or Test]
-    G --> H[Share Securely]
-    H --> I[Recipient Opens URL]
-    I --> J[Enter Password]
-    J --> K{Decrypt/Decode}
-    K -->|Success| L[Auto-Login]
-    K -->|Failed| J
+graph TD
+    A[Generate Share URL] --> B{Web Crypto API Available?}
+    B -->|Yes| C[AES-256-GCM Encryption]
+    B -->|No| D[Base64 Encoding]
+    C --> E[PBKDF2 Key Derivation<br/>100,000 iterations]
+    E --> F[Random Salt + IV]
+    F --> G[Encrypted Config]
+    D --> H[Password-Protected Base64]
+    G --> I[Generate Shareable URL]
+    H --> I
 ```
 
-**Generating a Shareable URL:**
+- **Modern Browsers** (Chrome 37+, Edge 79+): Use **AES-256-GCM** with PBKDF2 for military-grade encryption
+- **Legacy Browsers**: Fall back to **Base64 encoding** with password verification (less secure but functional)
 
-1. Click the **"Share"** button in the header
-2. Enter a strong password (minimum 4 characters, 12+ recommended)
-3. Click **"Generate URL"**
-4. The application creates a URL containing your encrypted credentials
-
-**Encryption Methods:**
-- **HTTPS/Localhost**: Full AES-256-GCM encryption with PBKDF2 key derivation (100,000 iterations)
-- **HTTP/File Protocol**: Base64 encoding with password verification (notification displayed)
-
-5. **Copy URL**: Use the "Copy URL" button to copy to clipboard
+#### Creating a Shareable URL
+1. Click the **Share** button in the header
+2. Enter a password (minimum 4 characters) for encrypting your configuration
+3. Click **Generate URL**
+4. The encrypted URL and password are displayed
+5. **Copy URL**: Click to copy the full URL to clipboard
 6. **Test URL**: Opens the URL in a new tab to verify functionality
-7. **Share Securely**: Transmit the URL and password through separate, secure channels
+7. Share both the URL and password separately with trusted recipients
 
-**Using a Shared URL:**
+#### What Gets Shared
+- IPTV server URL, username, and password (encrypted)
+- Your current favorites list
+- **Not shared**: Viewing history, search queries, or any personal browsing data
 
-1. Open the provided URL in your browser
-2. The password prompt appears automatically
-3. Enter the password provided separately
-4. The application decrypts/decodes and logs in automatically
-5. Your favorites are also restored from the shared configuration
-
-**Security Best Practices:**
-- Never share the URL and password in the same message
-- Use strong, unique passwords for each shared configuration
-- Share only with trusted recipients
-- Consider password managers for secure storage
-- URLs expire when credentials change—regenerate as needed
-
-### Account Information
-
-The header displays real-time subscription details:
-- **👤 Username**: Your IPTV account username
-- **📅 Expiry Status**:
-  - 🟢 Valid until [date] (green badge)
-  - 🟡 Expires in X days (yellow warning)
-  - 🔴 Expired (red alert)
-  - ♾️ Lifetime subscription indicator
+### Account Information Display
+- **Username Badge**: Shows your logged-in username in the header
+- **Expiry Status**:
+  - 🟢 **Valid until [date]**: Active subscription (blue badge)
+  - 🟡 **Expires in X days**: Expiring within 7 days (yellow badge)
+  - 🔴 **Expired**: Subscription ended (red badge)
+  - ⚪ **Lifetime**: No expiration date
 
 ### Logging Out
-
-Click the **"Logout"** button to:
-- Clear all cached data from memory
-- Stop active streams
+Click the **Logout** button in the header to:
+- Clear credentials from memory
+- Stop all active streams
 - Return to the login screen
-- Preserve favorites in localStorage (they're device-specific)
-
-## 🎨 Customization
-
-While the application works perfectly out-of-the-box, developers can customize the appearance by modifying the embedded CSS within `index.html`. The design uses a GitHub-inspired color scheme with CSS variables for easy theming.
-
-## 🐛 Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| **Connection Failed** | Verify server URL format, check credentials, ensure server is online |
-| **Mixed Content Blocked** | Use HTTP demo or host on HTTP server for HTTP IPTV servers |
-| **Video Won't Play** | Check browser compatibility, try a different browser, verify stream URL |
-| **Favorites Not Saving** | Ensure browser allows localStorage, check privacy settings |
-| **Slow Loading** | Normal for large channel lists—pagination loads 50 items at a time |
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit issues or pull requests to improve the player.
+- Retain favorites in localStorage for next session
 
 ## 📄 License
 
@@ -312,4 +229,28 @@ This project is licensed under the GNU General Public License v3.0.
 
 ---
 
-**Developed with ❤️ for the IPTV community** | [Report Issues](https://github.com/xsukax/xsukax-IPTV-Player/issues) | [Demo](http://iptv.xsukax.net)
+## 🛠️ Technical Specifications
+
+- **Frontend**: Vanilla JavaScript (ES6+)
+- **Streaming**: HLS.js for adaptive bitrate streaming
+- **Encryption**: Web Crypto API (AES-256-GCM with PBKDF2)
+- **Storage**: Browser localStorage (favorites only)
+- **API Compatibility**: Xtream Codes API
+- **Supported Formats**: M3U8 (HLS), MP4, MKV
+- **Browser Requirements**: Chrome 37+, Edge 79+, or equivalent Chromium-based browsers
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit issues, feature requests, or pull requests to improve the application.
+
+## ⚠️ Disclaimer
+
+This application is a client-side player for legitimate IPTV services. Users are responsible for ensuring they have proper authorization to access content through their IPTV provider. The developers do not provide, host, or distribute any IPTV content or services.
+
+## 📧 Support
+
+For questions, issues, or suggestions, please open an issue on the [GitHub repository](https://github.com/xsukax/xsukax-IPTV-Player).
+
+---
+
+**Made with ❤️ for the IPTV community**
