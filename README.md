@@ -7,7 +7,7 @@ A lightweight, secure, and privacy-focused IPTV player that runs entirely in you
 [![HTML5](https://img.shields.io/badge/HTML5-E34F26?logo=html5&logoColor=white)](https://html.spec.whatwg.org/)
 [![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 
-🌐 **Demo**: [http://iptv.xsukax.net](http://iptv.xsukax.net)
+🌐 **Demo**: [http://iptv.xsukax.net:8182](http://iptv.xsukax.net:8182)
 
 > **Note**: The demo uses HTTP (not HTTPS) to ensure compatibility with HTTP-based IPTV servers, as HTTPS pages cannot connect to insecure HTTP endpoints due to mixed content restrictions.
 
@@ -91,7 +91,7 @@ Built with vanilla JavaScript and leveraging HLS.js for adaptive streaming, this
 4. Shareable URLs generated in file mode will reference the local file path
 
 ### Option 4: Quick Start via Demo
-Simply visit [http://iptv.xsukax.net](http://iptv.xsukax.net) to use the application immediately without any installation.
+Simply visit [http://iptv.xsukax.net:8182](http://iptv.xsukax.net:8182) to use the application immediately without any installation.
 
 ## 🚀 Usage Guide
 
@@ -117,7 +117,7 @@ graph TD
    - Click **Connect** to authenticate
 
 2. **Via Shared Configuration**:
-   - Open a shared URL (format: `http://iptv.xsukax.net?config=ENCRYPTED_DATA`)
+   - Open a shared URL (format: `http://iptv.xsukax.net:8182?config=ENCRYPTED_DATA`)
    - Enter the password provided by the person who shared the configuration
    - Click **Decrypt** to load credentials and favorites
 
