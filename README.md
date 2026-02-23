@@ -91,7 +91,7 @@ Built with vanilla JavaScript and leveraging HLS.js for adaptive streaming, this
 4. Shareable URLs generated in file mode will reference the local file path
 
 ### Option 4: Quick Start via Demo
-Simply visit [http://iptv.xsukax.net:8182](http://iptv.xsukax.net:8182) to use the application immediately without any installation.
+Simply visit [http://bashub.cu.ma](http://bashub.cu.ma) to use the application immediately without any installation.
 
 ## 🚀 Usage Guide
 
@@ -117,7 +117,7 @@ graph TD
    - Click **Connect** to authenticate
 
 2. **Via Shared Configuration**:
-   - Open a shared URL (format: `http://iptv.xsukax.net:8182?config=ENCRYPTED_DATA`)
+   - Open a shared URL (format: `http://bashub.cu.ma?config=ENCRYPTED_DATA`)
    - Enter the password provided by the person who shared the configuration
    - Click **Decrypt** to load credentials and favorites
 
