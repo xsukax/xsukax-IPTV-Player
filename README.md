@@ -7,7 +7,7 @@ A lightweight, secure, and privacy-focused IPTV player that runs entirely in you
 [![HTML5](https://img.shields.io/badge/HTML5-E34F26?logo=html5&logoColor=white)](https://html.spec.whatwg.org/)
 [![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 
-🌐 **Demo**: [http://iptv.xsukax.net:8182](http://iptv.xsukax.net:8182)
+🌐 **Demo**: [http://bashub.cu.ma](http://bashub.cu.ma)
 
 > **Note**: The demo uses HTTP (not HTTPS) to ensure compatibility with HTTP-based IPTV servers, as HTTPS pages cannot connect to insecure HTTP endpoints due to mixed content restrictions.
 
