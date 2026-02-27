@@ -9,6 +9,8 @@ A lightweight, secure, and privacy-focused IPTV player that runs entirely in you
 
 🌐 **Demo**: [http://bashub.cu.ma](http://bashub.cu.ma)
 
+🌐 **M3U Demo**: [http://bashub.cu.ma/x-m3u-player.html](http://bashub.cu.ma/x-m3u-player.html)
+
 > **Note**: The demo uses HTTP (not HTTPS) to ensure compatibility with HTTP-based IPTV servers, as HTTPS pages cannot connect to insecure HTTP endpoints due to mixed content restrictions.
 
 ## 🎯 Project Overview
