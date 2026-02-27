@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<!--
+  xsukax M3U IPTV Player
+  Copyright (C) 2025 xsukax
+  Licensed under GNU General Public License v3.0
+  https://www.gnu.org/licenses/gpl-3.0.html
+
+  Privacy-focused, zero-server, browser-based M3U IPTV player.
+  All processing happens locally in your browser.
+  No data is ever transmitted to any third party.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>xsukax M3U IPTV Player</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.7/hls.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:#f6f8fa;color:#24292f;line-height:1.5;height:100vh;overflow:hidden;}
+#app{display:flex;flex-direction:column;height:100vh;}
+header{background:#fff;border-bottom:1px solid #d0d7de;padding:10px 20px;display:flex;align-items:center;gap:14px;flex-shrink:0;flex-wrap:wrap;}
+.logo{font-size:15px;font-weight:700;display:flex;align-items:center;gap:7px;white-space:nowrap;color:#24292f;}
+.logo-icon{font-size:22px;}
+.logo-sub{font-size:11px;font-weight:400;color:#57606a;display:block;margin-top:-2px;}
+#urlBar{display:flex;gap:7px;flex:1;min-width:200px;max-width:680px;}
+#urlInput{flex:1;padding:7px 11px;border:1px solid #d0d7de;border-radius:6px;font-size:13px;background:#fff;color:#24292f;transition:border-color .15s,box-shadow .15s;font-family:monospace;}
+#urlInput:focus{outline:none;border-color:#0969da;box-shadow:0 0 0 3px rgba(9,105,218,.12);}
+#urlInput::placeholder{color:#6e7781;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+.btn{padding:7px 13px;border:1px solid #d0d7de;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap;background:#f6f8fa;color:#24292f;line-height:1.4;}
+.btn:hover{background:#eaeef2;border-color:#afb8c1;}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:#0969da;color:#fff;border-color:#0969da;}
+.btn-primary:hover{background:#0860ca;border-color:#0860ca;}
+.btn-danger{background:#cf222e;color:#fff;border-color:#cf222e;}
+.btn-danger:hover{background:#a40e26;border-color:#a40e26;}
+.btn-fav{background:#fff8c5;color:#9a6700;border-color:#d4a72c;}
+.btn-fav:hover{background:#f4e8aa;border-color:#bf8700;}
+.btn-fav.active-fav{background:#bf8700;color:#fff;border-color:#bf8700;}
+.btn-fav.active-fav:hover{background:#9a6700;border-color:#9a6700;}
+.btn-sm{padding:5px 10px;font-size:12px;}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.header-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
+.badge{display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:600;background:#f6f8fa;border:1px solid #d0d7de;color:#57606a;}
+.badge-blue{background:#ddf4ff;border-color:#54aeff;color:#0969da;}
+.badge-green{background:#dafbe1;border-color:#4ac26b;color:#1a7f37;}
+.badge-orange{background:#fff8c5;border-color:#d4a72c;color:#9a6700;}
+.workspace{display:flex;flex:1;overflow:hidden;}
+#sidebar{width:310px;min-width:250px;background:#fff;border-right:1px solid #d0d7de;display:flex;flex-direction:column;flex-shrink:0;}
+.sidebar-toolbar{padding:10px 11px;border-bottom:1px solid #d0d7de;display:flex;flex-direction:column;gap:7px;}
+#searchInput{width:100%;padding:7px 10px;border:1px solid #d0d7de;border-radius:6px;font-size:13px;background:#f6f8fa;color:#24292f;transition:border-color .15s;}
+#searchInput:focus{outline:none;border-color:#0969da;box-shadow:0 0 0 3px rgba(9,105,218,.12);}
+#categorySelect{width:100%;padding:6px 9px;border:1px solid #d0d7de;border-radius:6px;font-size:13px;background:#fff;color:#24292f;cursor:pointer;}
+#categorySelect:focus{outline:none;border-color:#0969da;}
+.sidebar-meta{padding:5px 11px;font-size:11px;color:#57606a;border-bottom:1px solid #eaeef2;background:#f6f8fa;display:flex;justify-content:space-between;align-items:center;}
+#channelList{flex:1;overflow-y:auto;padding:7px;}
+#channelList::-webkit-scrollbar{width:5px;}
+#channelList::-webkit-scrollbar-track{background:#f6f8fa;}
+#channelList::-webkit-scrollbar-thumb{background:#d0d7de;border-radius:3px;}
+#channelList::-webkit-scrollbar-thumb:hover{background:#afb8c1;}
+.ch-item{display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:6px;cursor:pointer;border:1px solid transparent;transition:background .1s,border-color .1s;margin-bottom:3px;}
+.ch-item:hover{background:#f6f8fa;border-color:#d0d7de;}
+.ch-item.active{background:#ddf4ff;border-color:#54aeff;}
+.ch-logo{width:34px;height:34px;border-radius:4px;object-fit:contain;background:#eaeef2;flex-shrink:0;border:1px solid #eaeef2;}
+.ch-logo-placeholder{width:34px;height:34px;border-radius:4px;background:#eaeef2;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;color:#57606a;border:1px solid #d0d7de;}
+.ch-info{flex:1;min-width:0;}
+.ch-name{font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#24292f;}
+.ch-group{font-size:11px;color:#57606a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px;}
+.fav-btn{font-size:15px;cursor:pointer;background:none;border:none;color:#d0d7de;transition:color .15s;flex-shrink:0;padding:2px 3px;line-height:1;}
+.fav-btn.on{color:#bf8700;}
+.fav-btn:hover{color:#bf8700;}
+.load-more-btn{width:100%;padding:8px;margin-top:4px;border:1px dashed #d0d7de;border-radius:6px;background:none;cursor:pointer;font-size:12px;color:#57606a;transition:all .15s;}
+.load-more-btn:hover{background:#f6f8fa;border-color:#afb8c1;color:#24292f;}
+#player-area{flex:1;background:#000;display:flex;flex-direction:column;position:relative;overflow:hidden;}
+#videoEl{width:100%;height:100%;background:#000;display:none;}
+#placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:14px;color:#6e7781;text-align:center;padding:32px;}
+#placeholder .icon{font-size:68px;opacity:.35;}
+#placeholder h2{font-size:17px;font-weight:700;color:#24292f;}
+#placeholder p{font-size:13px;max-width:400px;color:#57606a;line-height:1.6;}
+.ph-hint{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:4px;}
+.player-overlay{position:absolute;top:0;left:0;right:0;padding:11px 14px;display:none;justify-content:space-between;align-items:flex-start;pointer-events:none;background:linear-gradient(to bottom,rgba(0,0,0,.6) 0%,transparent 100%);}
+#nowPlaying{color:#fff;font-size:13px;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.7);max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#nowGroup{font-size:11px;color:rgba(255,255,255,.7);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#playerControls{display:flex;gap:6px;pointer-events:all;}
+.pctrl{padding:5px 10px;font-size:12px;font-weight:500;cursor:pointer;border-radius:5px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);color:#fff;backdrop-filter:blur(4px);transition:background .15s;}
+.pctrl:hover{background:rgba(255,255,255,.28);}
+.error-banner{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:#cf222e;color:#fff;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;display:none;box-shadow:0 4px 12px rgba(0,0,0,.3);}
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .65s linear infinite;display:inline-block;vertical-align:middle;margin-right:5px;}
+.spinner-dark{width:16px;height:16px;border:2px solid #d0d7de;border-top-color:#0969da;border-radius:50%;animation:spin .65s linear infinite;display:inline-block;vertical-align:middle;margin-right:5px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#toasts{position:fixed;bottom:18px;right:18px;display:flex;flex-direction:column;gap:7px;z-index:9999;pointer-events:none;}
+.toast{padding:9px 15px;border-radius:6px;font-size:13px;font-weight:500;background:#fff;border:1px solid #d0d7de;box-shadow:0 4px 14px rgba(31,35,40,.18);animation:toastIn .22s ease;max-width:300px;line-height:1.4;}
+.toast.success{border-left:3px solid #1a7f37;color:#1a7f37;}
+.toast.error{border-left:3px solid #cf222e;color:#cf222e;}
+.toast.info{border-left:3px solid #0969da;color:#0969da;}
+.toast.warn{border-left:3px solid #bf8700;color:#9a6700;}
+.toast.out{animation:toastOut .22s ease forwards;}
+@keyframes toastIn{from{transform:translateX(30px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+@keyframes toastOut{to{transform:translateX(30px);opacity:0;}}
+.empty-msg{text-align:center;padding:28px 14px;color:#57606a;font-size:13px;}
+.sk-item{display:flex;align-items:center;gap:9px;padding:8px 9px;margin-bottom:3px;}
+.sk-logo{width:34px;height:34px;border-radius:4px;flex-shrink:0;}
+.sk-lines{flex:1;display:flex;flex-direction:column;gap:6px;}
+.sk-line{height:11px;border-radius:3px;}
+.skeleton{background:linear-gradient(90deg,#eaeef2 25%,#f6f8fa 50%,#eaeef2 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;}
+@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+.kbd{display:inline-block;padding:1px 6px;border:1px solid #d0d7de;border-radius:4px;font-size:11px;background:#f6f8fa;color:#57606a;font-family:monospace;}
+@media(max-width:800px){
+  body{overflow:auto;}
+  #app{height:auto;min-height:100vh;}
+  .workspace{flex-direction:column;}
+  #sidebar{width:100%;max-height:50vh;border-right:none;border-bottom:1px solid #d0d7de;}
+  #player-area{min-height:220px;}
+  .logo-sub{display:none;}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="logo">
+      <span class="logo-icon">📺</span>
+      <div>
+        xsukax M3U IPTV Player
+        <span class="logo-sub">Privacy-first · Zero server · Browser only</span>
+      </div>
+    </div>
+
+    <div id="urlBar">
+      <input id="urlInput" type="url" spellcheck="false" autocomplete="off"
+        placeholder="Paste M3U/M3U8 URL here…"
+        value="https://iptv-org.github.io/iptv/index.m3u">
+      <button class="btn btn-primary" id="loadBtn" onclick="Player.load()">▶ Load</button>
+      <label class="btn btn-sm" title="Load from local .m3u file" style="cursor:pointer;">
+        📁 File<input type="file" id="fileInput" accept=".m3u,.m3u8,.txt" style="display:none">
+      </label>
+    </div>
+
+    <div class="header-actions">
+      <span id="playlistBadge" style="display:none;"></span>
+      <button class="btn btn-sm btn-fav" id="favToggleBtn" onclick="Player.toggleFavFilter()" style="display:none;">☆ Favorites</button>
+      <button class="btn btn-sm btn-danger" id="clearBtn" onclick="Player.clear()" style="display:none;">✕ Clear</button>
+    </div>
+  </header>
+
+  <div class="workspace">
+
+    <div id="sidebar" style="display:none;">
+      <div class="sidebar-toolbar">
+        <input id="searchInput" type="search" placeholder="🔍 Search channels…">
+        <select id="categorySelect">
+          <option value="">All Groups</option>
+        </select>
+      </div>
+      <div class="sidebar-meta">
+        <span id="metaText">0 channels</span>
+        <span id="metaFavs" style="display:none;" class="badge badge-orange">0 ★</span>
+      </div>
+      <div id="channelList"></div>
+    </div>
+
+    <div id="player-area">
+      <div id="placeholder">
+        <div class="icon">📡</div>
+        <h2>xsukax M3U IPTV Player</h2>
+        <p>The default playlist is ready — just press <strong>▶ Load</strong> to stream thousands of free channels. Or paste your own M3U/M3U8 URL, or open a local file.</p>
+        <div class="ph-hint">
+          <span class="badge badge-green">🔒 Privacy-First</span>
+          <span class="badge badge-blue">⚡ Zero Server</span>
+          <span class="badge badge-blue">🌐 HLS / MP4</span>
+        </div>
+        <p style="margin-top:8px;font-size:12px;">
+          Keyboard: <span class="kbd">Space</span> Play/Pause &nbsp;
+          <span class="kbd">F</span> Fullscreen &nbsp;
+          <span class="kbd">M</span> Mute &nbsp;
+          <span class="kbd">←/→</span> Seek &nbsp;
+          <span class="kbd">↑/↓</span> Volume
+        </p>
+      </div>
+      <video id="videoEl" controls playsinline></video>
+      <div class="player-overlay" id="playerOverlay">
+        <div>
+          <div id="nowPlaying"></div>
+          <div id="nowGroup"></div>
+        </div>
+        <div id="playerControls">
+          <button class="pctrl" onclick="Player.togglePiP()" title="Picture-in-Picture">⧉ PiP</button>
+          <button class="pctrl" onclick="Player.toggleFullscreen()" title="Fullscreen">⛶ Full</button>
+        </div>
+      </div>
+      <div class="error-banner" id="errorBanner"></div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+/*
+ * xsukax M3U IPTV Player
+ * Copyright (C) 2025 xsukax — GPL-3.0 License
+ * https://www.gnu.org/licenses/gpl-3.0.html
+ *
+ * Completely client-side. No data leaves the browser.
+ */
+const Player = (() => {
+  'use strict';
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  const STATE = {
+    all: [],          // all parsed channels
+    filtered: [],     // after search/group/fav filter
+    shown: 0,         // how many rendered so far
+    active: null,     // currently playing channel object
+    hls: null,        // active HLS.js instance
+    favIds: new Set(tryParseJSON(localStorage.getItem('xiptv_favs'), [])),
+    groupFilter: '',
+    searchQuery: '',
+    favOnly: false,
+  };
+  const PAGE_SIZE = 60;
+  const CORS_PROXY = 'https://corsproxy.io/?';
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function tryParseJSON(str, fallback) {
+    try { return JSON.parse(str); } catch { return fallback; }
+  }
+
+  function esc(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function $(id) { return document.getElementById(id); }
+
+  // ── Toast ──────────────────────────────────────────────────────────────────
+  function toast(msg, type = 'info', duration = 3000) {
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.textContent = msg;
+    $('toasts').appendChild(el);
+    setTimeout(() => {
+      el.classList.add('out');
+      setTimeout(() => el.remove(), 240);
+    }, duration);
+  }
+
+  // ── M3U Parser ─────────────────────────────────────────────────────────────
+  function parseM3U(text) {
+    const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    if (!lines[0] || !lines[0].trim().startsWith('#EXTM3U')) {
+      toast('Not a valid M3U playlist — missing #EXTM3U header', 'error', 5000);
+      return [];
+    }
+
+    const result = [];
+    let pending = null;
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      if (line.startsWith('#EXTINF:')) {
+        // Parse attributes from the tag
+        const tvgId    = line.match(/tvg-id="([^"]*)"/)?.[1]      ?? '';
+        const tvgName  = line.match(/tvg-name="([^"]*)"/)?.[1]    ?? '';
+        const tvgLogo  = line.match(/tvg-logo="([^"]*)"/)?.[1]    ?? '';
+        const tvgGroup = line.match(/group-title="([^"]*)"/)?.[1] ?? 'Uncategorized';
+        // Title is everything after the last comma
+        const commaIdx = line.lastIndexOf(',');
+        const title = commaIdx !== -1 ? line.slice(commaIdx + 1).trim() : '';
+        pending = {
+          id:    tvgId,
+          name:  tvgName || title || 'Unknown',
+          title: title,
+          logo:  tvgLogo,
+          group: tvgGroup || 'Uncategorized',
+        };
+      } else if (!line.startsWith('#')) {
+        // Any non-comment line following #EXTINF is treated as the stream URL
+        if (pending) {
+          result.push({
+            ...pending,
+            url: line,
+            // Stable unique key: combination of id+url hash avoids duplicate issues
+            uid: `${pending.id || pending.name}__${result.length}`,
+          });
+          pending = null;
+        } else if (line.startsWith('http') || line.startsWith('//')) {
+          // URL without #EXTINF (bare playlist)
+          result.push({
+            id: '', name: line, title: line,
+            logo: '', group: 'Uncategorized',
+            url: line,
+            uid: `__bare_${result.length}`,
+          });
+        }
+      }
+    }
+    return result;
+  }
+
+  // ── Fetch / Load ───────────────────────────────────────────────────────────
+  async function load() {
+    const url = $('urlInput').value.trim();
+    if (!url) { toast('Enter a playlist URL first', 'warn'); return; }
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      toast('URL must start with http:// or https://', 'warn'); return;
+    }
+
+    setLoadingUI(true);
+    toast('Fetching playlist…', 'info', 2000);
+
+    let text = null;
+    try {
+      const r = await fetch(url, { cache: 'no-cache' });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      text = await r.text();
+    } catch (err) {
+      // Try CORS proxy as fallback
+      try {
+        toast('Direct fetch blocked — retrying via CORS proxy…', 'warn', 3000);
+        const r2 = await fetch(CORS_PROXY + encodeURIComponent(url), { cache: 'no-cache' });
+        if (!r2.ok) throw new Error(`Proxy HTTP ${r2.status}`);
+        text = await r2.text();
+      } catch (err2) {
+        toast('Failed to fetch playlist: ' + err2.message, 'error', 6000);
+        setLoadingUI(false);
+        return;
+      }
+    }
+
+    setLoadingUI(false);
+    ingest(text);
+  }
+
+  function loadFile(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    toast(`Reading ${file.name}…`, 'info');
+    const reader = new FileReader();
+    reader.onload = e => ingest(e.target.result);
+    reader.onerror = () => toast('Could not read file', 'error');
+    reader.readAsText(file, 'UTF-8');
+    input.value = '';
+  }
+
+  function ingest(text) {
+    const channels = parseM3U(text);
+    if (!channels.length) {
+      toast('No channels found in playlist', 'warn', 4000);
+      return;
+    }
+
+    STATE.all = channels;
+    STATE.groupFilter = '';
+    STATE.searchQuery = '';
+    STATE.favOnly = false;
+
+    // Reset header filter UI
+    $('favToggleBtn').textContent = '☆ Favorites';
+    $('favToggleBtn').classList.remove('active-fav');
+    $('searchInput').value = '';
+    $('categorySelect').value = '';
+
+    buildGroupDropdown();
+    applyFilter();
+
+    $('sidebar').style.display = 'flex';
+    $('clearBtn').style.display = '';
+    $('favToggleBtn').style.display = '';
+
+    const badge = $('playlistBadge');
+    badge.textContent = `${channels.length.toLocaleString()} channels`;
+    badge.className = 'badge badge-green';
+    badge.style.display = '';
+
+    toast(`✅ Loaded ${channels.length.toLocaleString()} channels`, 'success');
+  }
+
+  function setLoadingUI(loading) {
+    const btn = $('loadBtn');
+    btn.disabled = loading;
+    btn.innerHTML = loading
+      ? '<span class="spinner"></span> Loading…'
+      : '▶ Load';
+  }
+
+  // ── Group Dropdown ─────────────────────────────────────────────────────────
+  function buildGroupDropdown() {
+    const groups = [...new Set(STATE.all.map(c => c.group))].sort((a, b) =>
+      a.localeCompare(b, undefined, { sensitivity: 'base' })
+    );
+    const sel = $('categorySelect');
+    sel.innerHTML = `<option value="">All Groups (${groups.length})</option>` +
+      groups.map((g, i) => `<option value="${i}">${esc(g)}</option>`).join('');
+    // Store raw group array for index-based lookup
+    sel._groups = groups;
+  }
+
+  // ── Filter & Search ────────────────────────────────────────────────────────
+  function applyFilter() {
+    const q = STATE.searchQuery.toLowerCase();
+    STATE.filtered = STATE.all.filter(c => {
+      if (STATE.favOnly && !STATE.favIds.has(c.uid)) return false;
+      if (STATE.groupFilter !== '' && c.group !== STATE.groupFilter) return false;
+      if (q && !c.name.toLowerCase().includes(q) && !c.title.toLowerCase().includes(q)) return false;
+      return true;
+    });
+    STATE.shown = 0;
+    renderList(true);
+    updateMeta();
+  }
+
+  function search(val) {
+    STATE.searchQuery = val.trim();
+    applyFilter();
+  }
+
+  function filterGroup(idx) {
+    const sel = $('categorySelect');
+    STATE.groupFilter = idx === '' ? '' : (sel._groups || [])[parseInt(idx, 10)] ?? '';
+    applyFilter();
+  }
+
+  function toggleFavFilter() {
+    STATE.favOnly = !STATE.favOnly;
+    const btn = $('favToggleBtn');
+    btn.textContent = STATE.favOnly ? '★ Favorites ON' : '☆ Favorites';
+    btn.classList.toggle('active-fav', STATE.favOnly);
+    applyFilter();
+  }
+
+  function updateMeta() {
+    const favCount = STATE.favIds.size;
+    $('metaText').textContent =
+      `${STATE.filtered.length.toLocaleString()} of ${STATE.all.length.toLocaleString()} channels`;
+    const favBadge = $('metaFavs');
+    if (favCount > 0) {
+      favBadge.textContent = `${favCount} ★`;
+      favBadge.style.display = '';
+    } else {
+      favBadge.style.display = 'none';
+    }
+  }
+
+  // ── Render Channel List ────────────────────────────────────────────────────
+  function renderList(reset) {
+    const box = $('channelList');
+    if (reset) { box.innerHTML = ''; }
+
+    const slice = STATE.filtered.slice(STATE.shown, STATE.shown + PAGE_SIZE);
+    STATE.shown += slice.length;
+
+    if (STATE.shown === 0 && slice.length === 0) {
+      box.innerHTML = '<div class="empty-msg">No channels match your filter.</div>';
+      return;
+    }
+
+    // Remove existing load-more button before appending new items
+    const oldMore = box.querySelector('.load-more-btn');
+    if (oldMore) oldMore.remove();
+
+    const frag = document.createDocumentFragment();
+    slice.forEach(ch => frag.appendChild(buildChannelItem(ch)));
+    box.appendChild(frag);
+
+    if (STATE.shown < STATE.filtered.length) {
+      const more = document.createElement('button');
+      more.className = 'load-more-btn';
+      const rem = STATE.filtered.length - STATE.shown;
+      more.textContent = `▾ Show more (${rem.toLocaleString()} remaining)`;
+      more.addEventListener('click', () => renderList(false));
+      box.appendChild(more);
+    }
+  }
+
+  function buildChannelItem(ch) {
+    const isFav = STATE.favIds.has(ch.uid);
+    const isActive = STATE.active?.uid === ch.uid;
+    const div = document.createElement('div');
+    div.className = 'ch-item' + (isActive ? ' active' : '');
+    div.dataset.uid = ch.uid;
+
+    // Logo element
+    if (ch.logo) {
+      const img = document.createElement('img');
+      img.className = 'ch-logo';
+      img.src = ch.logo;
+      img.alt = '';
+      img.loading = 'lazy';
+      const fallback = document.createElement('div');
+      fallback.className = 'ch-logo-placeholder';
+      fallback.style.display = 'none';
+      fallback.textContent = '📺';
+      img.addEventListener('error', () => {
+        img.style.display = 'none';
+        fallback.style.display = 'flex';
+      });
+      div.appendChild(img);
+      div.appendChild(fallback);
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'ch-logo-placeholder';
+      ph.textContent = '📺';
+      div.appendChild(ph);
+    }
+
+    // Info
+    const info = document.createElement('div');
+    info.className = 'ch-info';
+    const nameEl = document.createElement('div');
+    nameEl.className = 'ch-name';
+    nameEl.textContent = ch.name || ch.title || 'Unknown';
+    const groupEl = document.createElement('div');
+    groupEl.className = 'ch-group';
+    groupEl.textContent = ch.group;
+    info.appendChild(nameEl);
+    info.appendChild(groupEl);
+    div.appendChild(info);
+
+    // Fav button — uses event listener, not inline onclick, so uid is safe
+    const favBtn = document.createElement('button');
+    favBtn.className = 'fav-btn' + (isFav ? ' on' : '');
+    favBtn.title = isFav ? 'Remove from favorites' : 'Add to favorites';
+    favBtn.textContent = isFav ? '★' : '☆';
+    favBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      toggleFav(ch.uid, favBtn);
+    });
+    div.appendChild(favBtn);
+
+    div.addEventListener('click', () => playChannel(ch));
+    return div;
+  }
+
+  // ── Favorites ──────────────────────────────────────────────────────────────
+  function toggleFav(uid, btn) {
+    if (STATE.favIds.has(uid)) {
+      STATE.favIds.delete(uid);
+      if (btn) { btn.textContent = '☆'; btn.classList.remove('on'); btn.title = 'Add to favorites'; }
+      toast('Removed from favorites', 'info', 2000);
+    } else {
+      STATE.favIds.add(uid);
+      if (btn) { btn.textContent = '★'; btn.classList.add('on'); btn.title = 'Remove from favorites'; }
+      toast('Added to favorites ★', 'success', 2000);
+    }
+    localStorage.setItem('xiptv_favs', JSON.stringify([...STATE.favIds]));
+    updateMeta();
+    if (STATE.favOnly) applyFilter(); // re-filter if showing favs only
+  }
+
+  // ── Playback ───────────────────────────────────────────────────────────────
+  function playChannel(ch) {
+    STATE.active = ch;
+
+    // Update active class
+    document.querySelectorAll('.ch-item').forEach(el => {
+      el.classList.toggle('active', el.dataset.uid === ch.uid);
+    });
+
+    const video = $('videoEl');
+    const errBanner = $('errorBanner');
+    errBanner.style.display = 'none';
+
+    // Tear down previous HLS instance
+    if (STATE.hls) {
+      STATE.hls.destroy();
+      STATE.hls = null;
+    }
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+
+    $('placeholder').style.display = 'none';
+    video.style.display = 'block';
+    const overlay = $('playerOverlay');
+    overlay.style.display = 'flex';
+    $('nowPlaying').textContent = ch.name || ch.title || 'Unknown';
+    $('nowGroup').textContent = ch.group || '';
+
+    const url = ch.url;
+    const isHLS = /\.m3u8(\?|$)/i.test(url) || /\/live\//i.test(url);
+
+    if (isHLS && Hls.isSupported()) {
+      const hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: true,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+        fragLoadingTimeOut: 20000,
+        manifestLoadingTimeOut: 15000,
+      });
+      STATE.hls = hls;
+      hls.loadSource(url);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.play().catch(() => {});
+      });
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (data.fatal) {
+          showStreamError(data.type + ': ' + data.details);
+          hls.destroy();
+          STATE.hls = null;
+        }
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Native HLS — Safari
+      video.src = url;
+      video.play().catch(() => {});
+    } else {
+      // Direct MP4 / other
+      video.src = url;
+      video.play().catch(() => {});
+    }
+
+    video.onerror = () => {
+      if (video.error) showStreamError('Video error: ' + video.error.message);
+    };
+  }
+
+  function showStreamError(msg) {
+    const b = $('errorBanner');
+    b.textContent = '⚠ ' + msg;
+    b.style.display = 'block';
+    setTimeout(() => { b.style.display = 'none'; }, 7000);
+    toast('Stream error: ' + msg, 'error', 5000);
+  }
+
+  // ── Player Controls ────────────────────────────────────────────────────────
+  function toggleFullscreen() {
+    const area = $('player-area');
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    } else {
+      (area.requestFullscreen || area.webkitRequestFullscreen || (() => {})).call(area);
+    }
+  }
+
+  async function togglePiP() {
+    const v = $('videoEl');
+    if (!v.src && !STATE.hls) { toast('Nothing is playing', 'warn'); return; }
+    try {
+      if (document.pictureInPictureElement) await document.exitPictureInPicture();
+      else await v.requestPictureInPicture();
+    } catch { toast('Picture-in-Picture not supported in this browser', 'warn'); }
+  }
+
+  // ── Clear ──────────────────────────────────────────────────────────────────
+  function clear() {
+    if (STATE.hls) { STATE.hls.destroy(); STATE.hls = null; }
+    const v = $('videoEl');
+    v.pause();
+    v.removeAttribute('src');
+    v.load();
+    v.style.display = 'none';
+
+    STATE.all = [];
+    STATE.filtered = [];
+    STATE.shown = 0;
+    STATE.active = null;
+    STATE.groupFilter = '';
+    STATE.searchQuery = '';
+    STATE.favOnly = false;
+
+    $('channelList').innerHTML = '';
+    $('sidebar').style.display = 'none';
+    $('placeholder').style.display = 'flex';
+    $('playerOverlay').style.display = 'none';
+    $('errorBanner').style.display = 'none';
+    $('playlistBadge').style.display = 'none';
+    $('clearBtn').style.display = 'none';
+    $('favToggleBtn').style.display = 'none';
+    $('urlInput').value = 'https://iptv-org.github.io/iptv/index.m3u';
+
+    toast('Playlist cleared', 'info', 2000);
+  }
+
+  // ── Keyboard Shortcuts ─────────────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+    const v = $('videoEl');
+    switch (e.key) {
+      case ' ':    e.preventDefault(); v.paused ? v.play() : v.pause(); break;
+      case 'f': case 'F': toggleFullscreen(); break;
+      case 'm': case 'M': v.muted = !v.muted; break;
+      case 'ArrowRight': v.currentTime = Math.min(v.duration || 0, v.currentTime + 10); break;
+      case 'ArrowLeft':  v.currentTime = Math.max(0, v.currentTime - 10); break;
+      case 'ArrowUp':    e.preventDefault(); v.volume = Math.min(1, v.volume + 0.1); break;
+      case 'ArrowDown':  e.preventDefault(); v.volume = Math.max(0, v.volume - 0.1); break;
+    }
+  });
+
+  // ── Wire up non-IIFE events ────────────────────────────────────────────────
+  $('urlInput').addEventListener('keydown', e => { if (e.key === 'Enter') load(); });
+  $('fileInput').addEventListener('change', function() { loadFile(this); });
+  $('searchInput').addEventListener('input', function() { search(this.value); });
+  $('categorySelect').addEventListener('change', function() { filterGroup(this.value); });
+
+  // Expose public API
+  return { load, toggleFavFilter, togglePiP, toggleFullscreen, clear };
+})();
+</script>
+</body>
+</html>
