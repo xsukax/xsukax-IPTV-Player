@@ -1,5 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
+<!--
+    xsukax IPTV Player
+    Copyright (C) 2024 xsukax
+    Licensed under GNU General Public License v3.0
+    https://www.gnu.org/licenses/gpl-3.0.html
+-->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -320,7 +326,7 @@
                 const password = document.getElementById('decryptPassword').value;
                 try {
                     this.notify('🔓 Decrypting configuration...', 'info');
-                    
+
                     let config;
                     try {
                         const decoded = JSON.parse(atob(this.state.pendingConfig));
@@ -339,11 +345,11 @@
                         const decrypted = await this.decryptData(this.state.pendingConfig, password);
                         config = JSON.parse(decrypted);
                     }
-                    
+
                     this.state.creds = config.credentials;
                     this.state.favorites = new Set(config.favorites || []);
                     this.saveFavorites();
-                    
+
                     try {
                         const url = this.buildUrl('player_api.php');
                         const res = await fetch(url);
@@ -354,11 +360,11 @@
                     } catch (err) {
                         console.error('Failed to fetch user info:', err);
                     }
-                    
+
                     this.closeModal('passwordModal');
                     await this.loadApp();
                     this.notify('✅ Configuration loaded successfully!', 'success');
-                    
+
                     try {
                         if (location.protocol !== 'file:') {
                             history.replaceState({}, '', location.pathname);
@@ -403,7 +409,10 @@
                 document.getElementById('userInfo').textContent = `👤 ${this.state.creds.username}`;
                 this.displayExpiry();
                 this.updateFavCount();
-                await Promise.all([this.loadCategories(), this.loadChannels()]);
+                // FIX: Load categories and channels sequentially so the channel
+                // count is available when renderCategories() runs its final pass.
+                await this.loadCategories();
+                await this.loadChannels();
             },
 
             displayExpiry() {
@@ -423,7 +432,7 @@
                 const expDate = new Date(expTimestamp * 1000);
                 const now = new Date();
                 const daysLeft = Math.ceil((expDate - now) / (1000 * 60 * 60 * 24));
-                
+
                 const day = expDate.getDate();
                 const month = expDate.toLocaleDateString('en-US', { month: 'short' });
                 const year = expDate.getFullYear();
@@ -439,7 +448,7 @@
                     expiryEl.textContent = `📅 Valid until ${dateStr}`;
                     expiryEl.className = 'badge badge-primary';
                 }
-                
+
                 expiryEl.classList.remove('hidden');
             },
 
@@ -472,6 +481,8 @@
                     this.state.allChannels = this.state.cache[key];
                     this.state.channels = [...this.state.allChannels];
                     this.resetPage();
+                    // Re-render category dropdown with accurate count from cache
+                    this.renderCategories();
                     this.renderChannels();
                     return;
                 }
@@ -489,6 +500,8 @@
                     this.state.channels = [...this.state.allChannels];
                     this.state.cache[key] = this.state.allChannels;
                     this.resetPage();
+                    // Re-render category dropdown now that allChannels is populated
+                    this.renderCategories();
                     this.renderChannels();
                     this.notify(`✅ Loaded ${this.state.allChannels.length} channels`, 'success');
                 } catch (error) {
@@ -499,7 +512,7 @@
 
             renderCategories() {
                 const select = document.getElementById('categorySelect');
-                select.innerHTML = `<option value="all">All Categories (${this.state.allChannels.length})</option>${this.state.categories.map(c => 
+                select.innerHTML = `<option value="all">All Categories (${this.state.allChannels.length})</option>${this.state.categories.map(c =>
                     `<option value="${c.category_id}">${this.escape(c.category_name)}</option>`
                 ).join('')}`;
                 select.value = this.state.category;
@@ -520,7 +533,7 @@
 
                 const container = document.getElementById('channelsList');
                 const resultEl = document.getElementById('resultCount');
-                
+
                 if (this.state.displayed.length === 0) {
                     container.innerHTML = '<div class="text-center text-small">No channels found</div>';
                     resultEl.classList.add('hidden');
@@ -588,7 +601,7 @@
             },
 
             showSkeleton() {
-                document.getElementById('channelsList').innerHTML = Array(5).fill(0).map(() => 
+                document.getElementById('channelsList').innerHTML = Array(5).fill(0).map(() =>
                     `<div class="channel-item">
                         <div class="skeleton h-8 w-75 mb-2"></div>
                         <div class="skeleton h-8 w-25"></div>
@@ -603,7 +616,7 @@
                     const res = await fetch(url);
                     const data = await res.json();
                     document.getElementById('seriesTitle').textContent = series.name || series.title;
-                    
+
                     const list = document.getElementById('episodesList');
                     if (!data.episodes || Object.keys(data.episodes).length === 0) {
                         list.innerHTML = '<div class="text-center text-small">No episodes available</div>';
@@ -611,7 +624,7 @@
                         const seasons = Object.keys(data.episodes).sort((a, b) => a - b);
                         list.innerHTML = seasons.map(s => {
                             const eps = data.episodes[s];
-                            return `<div class="season-header">Season ${s}</div>${eps.map(ep => 
+                            return `<div class="season-header">Season ${s}</div>${eps.map(ep =>
                                 `<div class="episode-item" data-ep='${JSON.stringify(ep).replace(/'/g, "&apos;")}' data-series='${JSON.stringify(series).replace(/'/g, "&apos;")}'>
                                     <h3>Ep ${ep.episode_num}: ${this.escape(ep.title || 'Untitled')}</h3>
                                 </div>`
@@ -645,14 +658,14 @@
                 const { serverUrl, username, password } = this.state.creds;
                 const { type } = this.state;
                 let url = '';
-                
+
                 if (type === 'live') {
                     url = `${serverUrl}/live/${username}/${password}/${ch.stream_id}.m3u8`;
                 } else if (type === 'movies') {
                     const ext = ch.container_extension || 'mp4';
                     url = `${serverUrl}/movie/${username}/${password}/${ch.stream_id}.${ext}`;
                 }
-                
+
                 this.playStream(url, ch.name || ch.title, ch.category_id);
             },
 
@@ -686,7 +699,7 @@
                             this.state.hls.loadSource(url);
                             this.state.hls.attachMedia(player);
                             this.state.hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                                player.play().catch(err => this.notify('❌ Playback failed', 'error'));
+                                player.play().catch(() => this.notify('❌ Playback failed', 'error'));
                             });
                             this.state.hls.on(Hls.Events.ERROR, (e, data) => {
                                 if (data.fatal) this.notify('❌ Stream error occurred', 'error');
@@ -695,7 +708,7 @@
                     } else {
                         player.src = url;
                         player.load();
-                        player.play().catch(err => this.notify('❌ Playback failed', 'error'));
+                        player.play().catch(() => this.notify('❌ Playback failed', 'error'));
                     }
                 }, 100);
             },
@@ -738,7 +751,7 @@
             showFavorites() {
                 const favs = this.state.allChannels.filter(c => this.state.favorites.has(this.getId(c)));
                 const list = document.getElementById('favList');
-                
+
                 if (favs.length === 0) {
                     list.innerHTML = '<div class="text-center text-small">No favorites yet<br><br>Star channels to add them here</div>';
                 } else {
@@ -782,7 +795,7 @@
 
                 try {
                     this.notify('🔒 Generating encrypted URL...', 'info');
-                    
+
                     let baseUrl = '';
                     if (location.protocol === 'file:') {
                         baseUrl = location.href.split('?')[0];
@@ -791,14 +804,14 @@
                     }
 
                     if (!window.crypto || !window.crypto.subtle) {
-                        const config = { 
-                            credentials: this.state.creds, 
+                        const config = {
+                            credentials: this.state.creds,
                             favorites: [...this.state.favorites],
                             _pass: btoa(password)
                         };
                         const encoded = btoa(JSON.stringify(config));
                         const url = `${baseUrl}?config=${encodeURIComponent(encoded)}`;
-                        
+
                         document.getElementById('shareUrl').textContent = url;
                         document.getElementById('sharePass').textContent = password;
                         document.getElementById('shareStep1').classList.add('hidden');
@@ -810,7 +823,7 @@
                     const config = { credentials: this.state.creds, favorites: [...this.state.favorites] };
                     const encrypted = await this.encryptData(JSON.stringify(config), password);
                     const url = `${baseUrl}?config=${encodeURIComponent(encrypted)}`;
-                    
+
                     document.getElementById('shareUrl').textContent = url;
                     document.getElementById('sharePass').textContent = password;
                     document.getElementById('shareStep1').classList.add('hidden');
@@ -883,7 +896,7 @@
                 this.state.category = 'all';
                 this.state.search = '';
                 document.getElementById('searchInput').value = '';
-                
+
                 document.querySelectorAll('.tab').forEach(btn => {
                     if (btn.dataset.type === type) {
                         btn.classList.remove('inactive');
@@ -895,8 +908,8 @@
                 });
 
                 this.notify(`📺 Switching to ${type === 'live' ? 'Live TV' : type === 'movies' ? 'Movies' : 'Series'}...`, 'info');
-                this.loadCategories();
-                this.loadChannels();
+                // Sequential load so count is always correct when switching tabs too
+                this.loadCategories().then(() => this.loadChannels());
             },
 
             changeCategory(cat) {
@@ -907,16 +920,16 @@
 
             handleSearch(query) {
                 this.state.search = query.trim();
-                
+
                 if (this.state.search) {
-                    this.state.channels = this.state.allChannels.filter(c => 
+                    this.state.channels = this.state.allChannels.filter(c =>
                         (c.name || c.title || '').toLowerCase().includes(this.state.search.toLowerCase())
                     );
                     this.notify(`🔍 Searching in ${this.state.allChannels.length} channels...`, 'info');
                 } else {
                     this.state.channels = [...this.state.allChannels];
                 }
-                
+
                 this.resetPage();
                 this.renderChannels();
             },
